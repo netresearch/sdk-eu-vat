@@ -12,11 +12,11 @@ use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterInterface;
 use Throwable;
 
 /**
- * Type converter for xsd:dateTime (date with time component)
+ * Type converter for xsd:date (date without time component)
  * 
- * This converter handles automatic conversion between XML dateTime strings and
- * PHP DateTimeImmutable objects. It includes full date and time information
- * with timezone handling.
+ * This converter handles automatic conversion between XML date strings and
+ * PHP DateTimeImmutable objects. It handles date-only values and sets time
+ * to start of day for consistency.
  * 
  * @example XML to PHP conversion:
  * ```php
@@ -51,37 +51,38 @@ final class DateTimeTypeConverter implements TypeConverterInterface
     /**
      * Get the XML Schema type name this converter handles
      * 
-     * @return string Always returns 'dateTime' for xsd:dateTime
+     * @return string Always returns 'date' for xsd:date
      */
     public function getTypeName(): string
     {
-        return 'dateTime';
+        return 'date';
     }
 
     /**
-     * Convert XML dateTime string to PHP DateTimeImmutable
+     * Convert XML date string to PHP DateTimeImmutable
      * 
-     * @param string $data XML dateTime string (e.g., '2024-01-15T14:30:00' or '2024-01-15T14:30:00Z')
-     * @return DateTimeImmutable PHP dateTime object
-     * @throws ParseException If the dateTime string cannot be parsed
+     * @param string $data XML date string (e.g., '2024-01-15')
+     * @return DateTimeImmutable PHP date object with time set to start of day
+     * @throws ParseException If the date string cannot be parsed
      * 
      * @example
      * ```php
-     * $dateTime = $converter->convertXmlToPhp('2024-01-15T14:30:00Z');
-     * echo $dateTime->format('Y-m-d H:i:s'); // "2024-01-15 14:30:00"
+     * $date = $converter->convertXmlToPhp('2024-01-15');
+     * echo $date->format('Y-m-d H:i:s'); // "2024-01-15 00:00:00"
      * ```
      */
     public function convertXmlToPhp(string $data): DateTimeImmutable
     {
         try {
-            // Handle various XML dateTime formats including timezone indicators
+            // Parse date and set time to start of day for consistency
             $dateTime = new DateTimeImmutable($data);
             
-            return $dateTime;
+            // Ensure time is at start of day for date-only values
+            return $dateTime->setTime(0, 0, 0);
         } catch (Throwable $e) {
             throw new ParseException(
                 sprintf(
-                    'Failed to parse dateTime value: %s (expected format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DDTHH:MM:SSZ)',
+                    'Failed to parse date value: %s (expected format: YYYY-MM-DD)',
                     $data
                 ),
                 0,
@@ -91,32 +92,25 @@ final class DateTimeTypeConverter implements TypeConverterInterface
     }
 
     /**
-     * Convert PHP DateTimeInterface to XML dateTime string
+     * Convert PHP DateTimeInterface to XML date string
      * 
-     * Returns full date and time in ISO 8601 format (Y-m-d\TH:i:s).
-     * Timezone information is handled appropriately for SOAP services.
+     * Returns date-only value in Y-m-d format, ignoring time component.
      * 
-     * @param mixed $data DateTimeInterface or dateTime string
-     * @return string XML dateTime string in YYYY-MM-DDTHH:MM:SS format
-     * @throws ParseException If the input cannot be converted to a dateTime
+     * @param mixed $data DateTimeInterface or date string
+     * @return string XML date string in YYYY-MM-DD format
+     * @throws ParseException If the input cannot be converted to a date
      * 
      * @example
      * ```php
-     * $xmlDateTime = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
-     * echo $xmlDateTime; // "2024-01-15T14:30:00"
+     * $xmlDate = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
+     * echo $xmlDate; // "2024-01-15"
      * ```
      */
     public function convertPhpToXml($data): string
     {
         if ($data instanceof DateTimeInterface) {
-            // Convert to UTC if timezone is available
-            if ($data->getTimezone()->getName() !== 'UTC') {
-                $utcDateTime = $data->setTimezone(new DateTimeZone('UTC'));
-                return $utcDateTime->format('Y-m-d\TH:i:s\Z');
-            }
-            
-            // Use ISO 8601 format with T separator
-            return $data->format('Y-m-d\TH:i:s');
+            // Return only the date portion for xsd:date
+            return $data->format('Y-m-d');
         }
         
         if (is_string($data)) {
@@ -125,7 +119,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
                 return $this->convertPhpToXml($dateTime);
             } catch (Throwable $e) {
                 throw new ParseException(
-                    sprintf('Failed to parse dateTime string: %s', $data),
+                    sprintf('Failed to parse date string: %s', $data),
                     0,
                     $e
                 );
@@ -134,7 +128,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
         
         throw new ParseException(
             sprintf(
-                'Cannot convert %s to XML dateTime. Expected DateTimeInterface or string, got: %s',
+                'Cannot convert %s to XML date. Expected DateTimeInterface or string, got: %s',
                 is_object($data) ? get_class($data) : gettype($data),
                 is_scalar($data) ? (string) $data : 'non-scalar'
             )

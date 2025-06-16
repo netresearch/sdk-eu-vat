@@ -210,6 +210,26 @@ final class RequestEventListener
     }
 
     /**
+     * Handle SOAP request event for logging
+     * 
+     * This method is called by the event dispatcher when a SOAP request is made.
+     * It extracts request information and logs it appropriately based on debug mode.
+     * 
+     * @param object $event The request event object
+     */
+    public function handleRequestEvent($event): void
+    {
+        // For compatibility with different event types, check if it has expected methods
+        $method = method_exists($event, 'getMethod') ? $event->getMethod() : 'unknown_method';
+        $arguments = method_exists($event, 'getArguments') ? $event->getArguments() : [];
+        
+        $startTime = microtime(true);
+        
+        // Log the request using our existing method
+        $this->logRequest($method, $arguments, $startTime);
+    }
+    
+    /**
      * Check if debug logging is enabled
      * 
      * @return bool True if debug mode is active

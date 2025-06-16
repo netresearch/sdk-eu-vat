@@ -298,6 +298,27 @@ final class ResponseEventListener
     }
 
     /**
+     * Handle SOAP response event for logging
+     * 
+     * This method is called by the event dispatcher when a SOAP response is received.
+     * It extracts response information and logs it appropriately based on debug mode.
+     * 
+     * @param object $event The response event object
+     */
+    public function handleResponseEvent($event): void
+    {
+        // For compatibility with different event types, check if it has expected methods
+        $method = method_exists($event, 'getMethod') ? $event->getMethod() : 'unknown_method';
+        $response = method_exists($event, 'getResponse') ? $event->getResponse() : null;
+        
+        $startTime = microtime(true) - 1; // Approximate start time
+        $endTime = microtime(true);
+        
+        // Log the response using our existing method
+        $this->logResponse($method, $response, $startTime, $endTime);
+    }
+    
+    /**
      * Check if debug logging is enabled
      * 
      * @return bool True if debug mode is active

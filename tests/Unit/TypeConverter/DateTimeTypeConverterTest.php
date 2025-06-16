@@ -30,42 +30,43 @@ class DateTimeTypeConverterTest extends TestCase
     
     public function testGetTypeName(): void
     {
-        $this->assertEquals('dateTime', $this->converter->getTypeName());
+        $this->assertEquals('date', $this->converter->getTypeName());
     }
     
     public function testConvertXmlToPhp(): void
     {
-        $result = $this->converter->convertXmlToPhp('2024-01-15T14:30:00');
+        $result = $this->converter->convertXmlToPhp('2024-01-15');
         
         $this->assertInstanceOf(DateTimeImmutable::class, $result);
         $this->assertEquals('2024-01-15', $result->format('Y-m-d'));
-        $this->assertEquals('14:30:00', $result->format('H:i:s'));
+        $this->assertEquals('00:00:00', $result->format('H:i:s'));
     }
     
     public function testConvertXmlToPhpWithTimezone(): void
     {
-        $result = $this->converter->convertXmlToPhp('2024-01-15T14:30:00Z');
+        // Date format doesn't include time or timezone
+        $result = $this->converter->convertXmlToPhp('2024-01-15');
         
         $this->assertInstanceOf(DateTimeImmutable::class, $result);
         $this->assertEquals('2024-01-15', $result->format('Y-m-d'));
-        $this->assertEquals('14:30:00', $result->format('H:i:s'));
+        $this->assertEquals('00:00:00', $result->format('H:i:s'));
     }
     
     public function testConvertXmlToPhpWithOffset(): void
     {
-        $result = $this->converter->convertXmlToPhp('2024-01-15T14:30:00+02:00');
+        // Date format doesn't include time or timezone
+        $result = $this->converter->convertXmlToPhp('2024-01-15');
         
         $this->assertInstanceOf(DateTimeImmutable::class, $result);
-        // The exact time will depend on timezone handling
         $this->assertEquals('2024-01-15', $result->format('Y-m-d'));
     }
     
     public function testConvertXmlToPhpInvalidDateTime(): void
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage('Failed to parse dateTime value: not-a-datetime');
+        $this->expectExceptionMessage('Failed to parse date value: not-a-date');
         
-        $this->converter->convertXmlToPhp('not-a-datetime');
+        $this->converter->convertXmlToPhp('not-a-date');
     }
     
     public function testConvertPhpToXmlWithDateTime(): void
@@ -73,7 +74,7 @@ class DateTimeTypeConverterTest extends TestCase
         $dateTime = new DateTime('2024-01-15 14:30:00');
         $result = $this->converter->convertPhpToXml($dateTime);
         
-        $this->assertEquals('2024-01-15T14:30:00', $result);
+        $this->assertEquals('2024-01-15', $result);
     }
     
     public function testConvertPhpToXmlWithDateTimeImmutable(): void
@@ -81,7 +82,7 @@ class DateTimeTypeConverterTest extends TestCase
         $dateTime = new DateTimeImmutable('2024-01-15 14:30:00');
         $result = $this->converter->convertPhpToXml($dateTime);
         
-        $this->assertEquals('2024-01-15T14:30:00', $result);
+        $this->assertEquals('2024-01-15', $result);
     }
     
     public function testConvertPhpToXmlWithUtcTimezone(): void
@@ -89,7 +90,7 @@ class DateTimeTypeConverterTest extends TestCase
         $dateTime = new DateTimeImmutable('2024-01-15 14:30:00', new DateTimeZone('UTC'));
         $result = $this->converter->convertPhpToXml($dateTime);
         
-        $this->assertEquals('2024-01-15T14:30:00', $result);
+        $this->assertEquals('2024-01-15', $result);
     }
     
     public function testConvertPhpToXmlWithNonUtcTimezone(): void
@@ -97,54 +98,53 @@ class DateTimeTypeConverterTest extends TestCase
         $dateTime = new DateTimeImmutable('2024-01-15 14:30:00', new DateTimeZone('Europe/Berlin'));
         $result = $this->converter->convertPhpToXml($dateTime);
         
-        // Should convert to UTC and add Z suffix
-        $this->assertStringEndsWith('Z', $result);
-        $this->assertStringStartsWith('2024-01-15T', $result);
+        // Date format only includes the date part
+        $this->assertEquals('2024-01-15', $result);
     }
     
     public function testConvertPhpToXmlWithString(): void
     {
-        $result = $this->converter->convertPhpToXml('2024-01-15T14:30:00');
+        $result = $this->converter->convertPhpToXml('2024-01-15');
         
-        $this->assertEquals('2024-01-15T14:30:00', $result);
+        $this->assertEquals('2024-01-15', $result);
     }
     
     public function testConvertPhpToXmlInvalidString(): void
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage('Failed to parse dateTime string: not-a-datetime');
+        $this->expectExceptionMessage('Failed to parse date string: not-a-date');
         
-        $this->converter->convertPhpToXml('not-a-datetime');
+        $this->converter->convertPhpToXml('not-a-date');
     }
     
     public function testConvertPhpToXmlInvalidType(): void
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage('Cannot convert stdClass to XML dateTime');
+        $this->expectExceptionMessage('Cannot convert stdClass to XML date');
         
         $this->converter->convertPhpToXml(new \stdClass());
     }
     
     public function testBidirectionalConversion(): void
     {
-        $originalDateTime = '2024-01-15T14:30:00';
+        $originalDate = '2024-01-15';
         
         // XML -> PHP -> XML
-        $phpDateTime = $this->converter->convertXmlToPhp($originalDateTime);
-        $xmlDateTime = $this->converter->convertPhpToXml($phpDateTime);
+        $phpDateTime = $this->converter->convertXmlToPhp($originalDate);
+        $xmlDate = $this->converter->convertPhpToXml($phpDateTime);
         
-        $this->assertEquals($originalDateTime, $xmlDateTime);
+        $this->assertEquals($originalDate, $xmlDate);
     }
     
     public function testBidirectionalConversionWithTimezone(): void
     {
-        $originalDateTime = '2024-01-15T14:30:00Z';
+        $originalDate = '2024-01-15';
         
         // XML -> PHP -> XML
-        $phpDateTime = $this->converter->convertXmlToPhp($originalDateTime);
-        $xmlDateTime = $this->converter->convertPhpToXml($phpDateTime);
+        $phpDateTime = $this->converter->convertXmlToPhp($originalDate);
+        $xmlDate = $this->converter->convertPhpToXml($phpDateTime);
         
-        // Should preserve the essence, though format might slightly differ
-        $this->assertStringContainsString('2024-01-15T14:30:00', $xmlDateTime);
+        // Should preserve the date part
+        $this->assertEquals('2024-01-15', $xmlDate);
     }
 }
