@@ -25,8 +25,10 @@
         "phpstan/phpstan": "^1.10",
         "monolog/monolog": "^3.0",
         "squizlabs/php_codesniffer": "^3.7",
+        "slevomat/coding-standard": "^8.0",
         "rector/rector": "^1.0",
-        "php-vcr/php-vcr": "^1.5"
+        "php-vcr/php-vcr": "^1.5",
+        "phpmd/phpmd": "^2.13"
     },
     "autoload": {
         "psr-4": {
@@ -41,18 +43,31 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
         }
     },
     "scripts": {
         "test": "phpunit",
         "test:unit": "phpunit --testsuite=unit",
-        "test:integration": "phpunit --testsuite=integration --group=network",
-        "test:integration:record": "phpunit --testsuite=integration --group=network-record",
-        "analyse": "phpstan analyse",
+        "test:integration": "phpunit --testsuite=integration",
+        "test:coverage": "phpunit --testsuite=unit --coverage-html=coverage/html --coverage-clover=coverage/clover.xml",
+        "analyse": "phpstan analyse --no-progress",
         "cs-check": "phpcs",
         "cs-fix": "phpcbf",
-        "rector": "rector process --dry-run"
+        "rector": "rector process --dry-run",
+        "rector:fix": "rector process",
+        "phpmd": "phpmd src,tests text phpmd.xml",
+        "quality": [
+            "@analyse",
+            "@cs-check",
+            "@phpmd",
+            "@rector"
+        ],
+        "ci": [
+            "@test:unit",
+            "@quality"
+        ]
     },
     "suggest": {
         "monolog/monolog": "For advanced logging capabilities"

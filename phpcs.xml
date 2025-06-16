@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<ruleset name="EU VAT SDK Coding Standards">
+    <description>Coding standards for EU VAT SOAP SDK</description>
+    
+    <!-- Use PSR-12 as base standard -->
+    <rule ref="PSR12"/>
+    
+    <!-- Check these paths -->
+    <file>src</file>
+    <file>tests</file>
+    
+    <!-- Exclude vendor and generated files -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>tests/fixtures/cassettes/*</exclude-pattern>
+    
+    <!-- Additional rules for financial SDK -->
+    
+    <!-- Require strict type declarations -->
+    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
+        <properties>
+            <property name="linesCountBeforeDeclare" value="1"/>
+            <property name="linesCountAfterDeclare" value="1"/>
+            <property name="spacesCountAroundEqualsSign" value="0"/>
+        </properties>
+    </rule>
+    
+    <!-- Require comprehensive PHPDoc -->
+    <rule ref="Squiz.Commenting.ClassComment">
+        <exclude name="Squiz.Commenting.ClassComment.TagNotAllowed"/>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment"/>
+    
+    <!-- Ensure proper exception handling patterns -->
+    <rule ref="SlevomatCodingStandard.Exceptions.RequireNonCapturingCatch"/>
+    
+    <!-- Enforce return type declarations -->
+    <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint"/>
+    <rule ref="SlevomatCodingStandard.TypeHints.ParameterTypeHint"/>
+    <rule ref="SlevomatCodingStandard.TypeHints.PropertyTypeHint"/>
+    
+    <!-- Disallow unused imports -->
+    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses">
+        <properties>
+            <property name="searchAnnotations" value="true"/>
+        </properties>
+    </rule>
+    
+    <!-- Enforce consistent array syntax -->
+    <rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+    
+    <!-- Financial calculations security -->
+    <rule ref="Generic.PHP.ForbiddenFunctions">
+        <properties>
+            <property name="forbiddenFunctions" type="array">
+                <!-- Discourage float operations for financial calculations -->
+                <element key="floatval" value="Use BigDecimal for financial calculations"/>
+                <element key="doubleval" value="Use BigDecimal for financial calculations"/>
+            </property>
+        </properties>
+    </rule>
+    
+    <!-- Disallow float type hints to enforce BigDecimal usage -->
+    <rule ref="SlevomatCodingStandard.TypeHints.DisallowArrayTypeHintSyntax"/>
+    <rule ref="SlevomatCodingStandard.TypeHints.DisallowMixedTypeHint"/>
+    
+    <!-- Line length for readability -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="140"/>
+        </properties>
+    </rule>
+    
+    <!-- Complexity limits -->
+    <rule ref="Generic.Metrics.CyclomaticComplexity">
+        <properties>
+            <property name="complexity" value="10"/>
+            <property name="absoluteComplexity" value="15"/>
+        </properties>
+    </rule>
+    
+    <rule ref="Generic.Metrics.NestingLevel">
+        <properties>
+            <property name="nestingLevel" value="5"/>
+            <property name="absoluteNestingLevel" value="8"/>
+        </properties>
+    </rule>
+</ruleset>

@@ -1,0 +1,43 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    
+    # Exclude vendor and generated files
+    excludePaths:
+        - vendor/*
+        - tests/fixtures/cassettes/*
+    
+    # Rules for financial calculations
+    rules:
+        # Ensure BigDecimal is used for financial calculations
+        - Netresearch\EuVatSdk\PHPStan\Rules\BigDecimalUsageRule
+    
+    # Custom error patterns for financial SDK
+    ignoreErrors:
+        # Allow dynamic properties ONLY in the anonymous logger class for testing purposes.
+        # This is necessary because the test logger is created on-the-fly.
+        - '#Access to an undefined property [^:]+::\$[^.]+\.#'
+        
+        # Allow VCR cassette files to be missing during analysis
+        - '#File .+\.yml was not found\.#'
+    
+    # Strict rules for exception handling
+    checkMissingIterableValueType: true
+    checkGenericClassInNonGenericObjectType: true
+    
+    # Ensure proper type declarations
+    reportUnmatchedIgnoredErrors: true
+    
+    # Bootstrap file for custom rules
+    bootstrapFiles:
+        - tests/bootstrap.php
+    
+    # Symfony integration for event dispatcher
+    symfony:
+        containerXmlPath: null
+        constantHassers: false
+        
+    # Memory limit for analysis
+    memoryLimitFile: .phpstan-memory-limit

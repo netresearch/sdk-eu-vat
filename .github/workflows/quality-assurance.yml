@@ -1,0 +1,161 @@
+name: Quality Assurance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: soap, libxml, mbstring
+          tools: composer:v2
+          coverage: none
+          
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+          
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --error-format=github
+        
+      - name: Run PHP_CodeSniffer
+        run: vendor/bin/phpcs --report=github
+        
+      - name: Run PHPMD
+        run: vendor/bin/phpmd src,tests github phpmd.xml
+        
+        
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: soap, libxml, mbstring, xdebug
+          tools: composer:v2
+          coverage: xdebug
+          
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+          
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        
+      - name: Run unit tests
+        run: vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml
+        
+      - name: Run integration tests
+        run: vendor/bin/phpunit --testsuite=integration --no-coverage
+        env:
+          USE_PRODUCTION_ENDPOINT: false
+          REFRESH_CASSETTES: false
+          
+      - name: Upload coverage to Codecov
+        if: matrix.php-version == '8.1'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install Symfony CLI
+        run: wget https://get.symfony.com/cli/installer -O - | bash
+        
+      - name: Run security checker
+        run: /home/runner/.symfony5/bin/symfony security:check
+        
+  rector:
+    name: Rector Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: soap, libxml
+          tools: composer:v2
+          
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        
+      - name: Run Rector (dry-run)
+        run: vendor/bin/rector process --dry-run --no-progress-bar
+        
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: soap, libxml
+          tools: composer:v2
+          
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        
+      - name: Run performance benchmarks
+        run: vendor/bin/phpunit tests/Integration/PerformanceBenchmarkTest.php --no-coverage
+        env:
+          USE_PRODUCTION_ENDPOINT: false

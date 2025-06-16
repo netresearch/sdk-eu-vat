@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<ruleset name="EU VAT SDK PHPMD Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+    
+    <description>Custom PHPMD rules for EU VAT SDK</description>
+    
+    <!-- Include all default rulesets -->
+    <rule ref="rulesets/cleancode.xml">
+        <!-- Allow shorter boolean method names for readability -->
+        <exclude name="BooleanArgumentFlag"/>
+        <!-- Allow static access for factories -->
+        <exclude name="StaticAccess"/>
+    </rule>
+    
+    <rule ref="rulesets/codesize.xml"/>
+    
+    <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
+        <properties>
+            <property name="reportLevel" value="12"/>
+        </properties>
+    </rule>
+    
+    <rule ref="rulesets/codesize.xml/NPathComplexity">
+        <properties>
+            <property name="minimum" value="250"/>
+        </properties>
+    </rule>
+    
+    <rule ref="rulesets/controversial.xml">
+        <!-- Allow superglobals for environment variables -->
+        <exclude name="Superglobals"/>
+    </rule>
+    
+    <rule ref="rulesets/design.xml">
+        <!-- Allow eval in VCR context (testing only) -->
+        <exclude name="EvalExpression"/>
+    </rule>
+    
+    <rule ref="rulesets/naming.xml">
+        <!-- Allow shorter variable names in specific contexts -->
+        <exclude name="ShortVariable"/>
+    </rule>
+    
+    <rule ref="rulesets/naming.xml/ShortVariable">
+        <properties>
+            <property name="minimum" value="2"/>
+        </properties>
+        <!-- Allow common short names -->
+        <properties>
+            <property name="exceptions" value="id,ip,db,eu"/>
+        </properties>
+    </rule>
+    
+    <rule ref="rulesets/unusedcode.xml"/>
+    
+    <!-- Financial calculation safety is enforced via PHPCS and PHPStan rules -->
+</ruleset>
