@@ -50,7 +50,4 @@ VCR::configure()
     );
 
 // Enable library hooks for SOAP recording
-VCR::enableLibraryHooks([
-    'curl',
-    'soap',
-]);
+VCR::configure()->enableLibraryHooks(['curl', 'soap']);

@@ -45,7 +45,7 @@ if (!file_exists($composerPath)) {
     $errors[] = "composer.json not found";
 } else {
     $composerJson = json_decode(file_get_contents($composerPath), true);
-    
+
     if (json_last_error() !== JSON_ERROR_NONE) {
         $errors[] = "Invalid composer.json: " . json_last_error_msg();
     } else {
@@ -56,12 +56,12 @@ if (!file_exists($composerPath)) {
                 $errors[] = "composer.json missing required field: $field";
             }
         }
-        
+
         // Validate package name
         if (isset($composerJson['name']) && $composerJson['name'] !== 'netresearch/sdk-eu-vat') {
             $errors[] = "Invalid package name: " . $composerJson['name'];
         }
-        
+
         // Check dependencies
         if (isset($composerJson['require'])) {
             $expectedDeps = [
@@ -71,14 +71,14 @@ if (!file_exists($composerPath)) {
                 'brick/math' => '^0.12',
                 'psr/log' => '^3.0',
             ];
-            
+
             foreach ($expectedDeps as $dep => $constraint) {
                 if (!isset($composerJson['require'][$dep])) {
                     $warnings[] = "Missing expected dependency: $dep";
                 }
             }
         }
-        
+
         echo "   ✓ composer.json structure valid\n";
     }
 }
@@ -90,7 +90,7 @@ if (!file_exists($autoloadPath)) {
     $warnings[] = "vendor/autoload.php not found - run 'composer install'";
 } else {
     require_once $autoloadPath;
-    
+
     // Test autoloading of key classes
     $testClasses = [
         'Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory',
@@ -98,7 +98,7 @@ if (!file_exists($autoloadPath)) {
         'Netresearch\EuVatSdk\DTO\Request\VatRatesRequest',
         'Netresearch\EuVatSdk\Exception\VatServiceException',
     ];
-    
+
     foreach ($testClasses as $class) {
         if (!class_exists($class)) {
             $errors[] = "Class not autoloadable: $class";
@@ -197,19 +197,19 @@ if (is_dir($examplesDir)) {
     $examples = glob($examplesDir . '/*.php');
     foreach ($examples as $example) {
         $content = file_get_contents($example);
-        
+
         // Check for syntax errors
         $output = [];
         $returnCode = 0;
         exec("php -l $example 2>&1", $output, $returnCode);
-        
+
         if ($returnCode !== 0) {
             $errors[] = "Syntax error in example: " . basename($example);
             echo "   ✗ Syntax error: " . basename($example) . "\n";
         } else {
             echo "   ✓ Valid syntax: " . basename($example) . "\n";
         }
-        
+
         // Check for require statement
         if (!str_contains($content, 'require_once') && !str_contains($content, 'require')) {
             $warnings[] = "Example missing autoload require: " . basename($example);
@@ -224,11 +224,11 @@ echo "\n9. Validating WSDL file...\n";
 $wsdlPath = __DIR__ . '/../resources/VatRetrievalService.wsdl';
 if (file_exists($wsdlPath)) {
     $wsdlContent = file_get_contents($wsdlPath);
-    
+
     // Basic XML validation
     libxml_use_internal_errors(true);
     $xml = simplexml_load_string($wsdlContent);
-    
+
     if ($xml === false) {
         $errors[] = "Invalid WSDL file: XML parsing failed";
         foreach (libxml_get_errors() as $error) {
@@ -236,7 +236,7 @@ if (file_exists($wsdlPath)) {
         }
     } else {
         echo "   ✓ WSDL file is valid XML\n";
-        
+
         // Check for expected service
         if (str_contains($wsdlContent, 'VatRetrievalService')) {
             echo "   ✓ WSDL contains VatRetrievalService definition\n";

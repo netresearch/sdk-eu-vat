@@ -17,7 +17,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
-use Netresearch\EuVatSdk\Client\ClientConfiguration;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
@@ -68,16 +67,16 @@ $memorySamples = [];
 for ($i = 0; $i < 50; $i++) {
     $memStart = memory_get_usage();
     $start = microtime(true);
-    
+
     $request = new VatRatesRequest(['DE'], new \DateTime('2024-01-01'));
     $response = $client->retrieveVatRates($request);
-    
+
     $duration = (microtime(true) - $start) * 1000;
     $memUsed = (memory_get_usage() - $memStart) / 1024; // KB
-    
+
     $times[] = $duration;
     $memorySamples[] = $memUsed;
-    
+
     // Small delay to avoid hammering the service
     usleep(100000); // 100ms
 }
@@ -103,16 +102,16 @@ $memorySamples = [];
 for ($i = 0; $i < 20; $i++) {
     $memStart = memory_get_usage();
     $start = microtime(true);
-    
+
     $request = new VatRatesRequest($countries, new \DateTime('2024-01-01'));
     $response = $client->retrieveVatRates($request);
-    
+
     $duration = (microtime(true) - $start) * 1000;
     $memUsed = (memory_get_usage() - $memStart) / 1024;
-    
+
     $times[] = $duration;
     $memorySamples[] = $memUsed;
-    
+
     usleep(200000); // 200ms delay
 }
 
@@ -167,14 +166,14 @@ $errorTimes = [];
 
 for ($i = 0; $i < 20; $i++) {
     $start = microtime(true);
-    
+
     try {
         $request = new VatRatesRequest(['XX', 'YY'], new \DateTime('2024-01-01'));
         $client->retrieveVatRates($request);
-    } catch (\Exception $e) {
+    } catch (\Exception) {
         // Expected error
     }
-    
+
     $errorTimes[] = (microtime(true) - $start) * 1000;
     usleep(100000);
 }

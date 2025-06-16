@@ -50,7 +50,7 @@ class EndToEndTest extends IntegrationTestCase
         // Step 3: Validate response
         $this->assertCount(1, $response->getResults());
         $result = $response->getResults()[0];
-        
+
         $this->assertEquals('DE', $result->getMemberState());
         $this->assertEquals('STANDARD', $result->getVatRate()->getType());
         $this->assertEquals('19.0', $result->getVatRate()->getValue());
@@ -70,7 +70,7 @@ class EndToEndTest extends IntegrationTestCase
 
         // Test modern PHP features work correctly
         $client = VatRetrievalClientFactory::create();
-        
+
         // Test named arguments (PHP 8.0+)
         $request = new VatRatesRequest(
             memberStates: ['FR', 'IT'],
@@ -113,13 +113,13 @@ class EndToEndTest extends IntegrationTestCase
         );
 
         $response = $client->retrieveVatRates($request);
-        
+
         $memoryEnd = memory_get_usage();
         $memoryUsed = ($memoryEnd - $memoryStart) / 1024 / 1024; // Convert to MB
 
         $this->assertCount(27, $response->getResults());
         $this->assertLessThan(5, $memoryUsed, 'Memory usage should be under 5MB for all EU states');
-        
+
         $this->logger->info('Memory usage for all EU states', [
             'memory_mb' => round($memoryUsed, 2),
             'results_count' => count($response->getResults()),
@@ -137,7 +137,7 @@ class EndToEndTest extends IntegrationTestCase
         $this->setupVcr('e2e-concurrent-requests');
 
         $client = VatRetrievalClientFactory::create();
-        
+
         // Simulate multiple requests with different configurations
         $requests = [
             new VatRatesRequest(['DE', 'FR'], new DateTime('2024-01-01')),
@@ -188,7 +188,7 @@ class EndToEndTest extends IntegrationTestCase
             $request = new VatRatesRequest([], new DateTime('2024-01-01'));
             $client->retrieveVatRates($request);
             $this->fail('Should throw exception for empty states');
-        } catch (VatServiceException $e) {
+        } catch (VatServiceException) {
             $this->assertTrue(true);
         }
 
@@ -196,12 +196,12 @@ class EndToEndTest extends IntegrationTestCase
         try {
             $invalidConfig = ClientConfiguration::production()
                 ->withWsdlPath('/non/existent/path.wsdl');
-            
+
             $invalidClient = new \Netresearch\EuVatSdk\Client\SoapVatRetrievalClient($invalidConfig);
             $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
             $invalidClient->retrieveVatRates($request);
             $this->fail('Should throw ConfigurationException');
-        } catch (\Netresearch\EuVatSdk\Exception\ConfigurationException $e) {
+        } catch (\Netresearch\EuVatSdk\Exception\ConfigurationException) {
             $this->assertTrue(true);
         }
     }
@@ -217,28 +217,28 @@ class EndToEndTest extends IntegrationTestCase
 
         $client = VatRetrievalClientFactory::create();
         $request = new VatRatesRequest(['LU', 'MT'], new DateTime('2024-01-01'));
-        
+
         $response = $client->retrieveVatRates($request);
 
         foreach ($response->getResults() as $result) {
             $vatRate = $result->getVatRate();
-            
+
             // Test precise decimal handling
             $decimalValue = $vatRate->getDecimalValue();
             $this->assertInstanceOf(BigDecimal::class, $decimalValue);
-            
+
             // Test financial calculations
             $netAmount = BigDecimal::of('999.99');
             $vatAmount = $netAmount->multipliedBy($decimalValue)->dividedBy('100', 2);
             $grossAmount = $netAmount->plus($vatAmount);
-            
+
             // Verify calculations maintain precision
             $this->assertEquals(
                 $netAmount->plus($vatAmount)->__toString(),
                 $grossAmount->__toString(),
                 'Financial calculations should maintain precision'
             );
-            
+
             // Verify no floating point errors
             $this->assertMatchesRegularExpression(
                 '/^\d+\.\d{2}$/',
@@ -256,7 +256,7 @@ class EndToEndTest extends IntegrationTestCase
     public function testVariousClientConfigurations(): void
     {
         $cassetteName = 'e2e-client-configurations';
-        
+
         if ($this->shouldRefreshCassettes()) {
             $this->recordCassette($cassetteName);
         } else {
@@ -267,14 +267,14 @@ class EndToEndTest extends IntegrationTestCase
         $prodClient = VatRetrievalClientFactory::create(
             ClientConfiguration::production($this->logger)
         );
-        
+
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
         $response = $prodClient->retrieveVatRates($request);
         $this->assertCount(1, $response->getResults());
 
         // Test 2: Test configuration with debug
         $testClient = VatRetrievalClientFactory::createForTesting($this->logger, true);
-        
+
         $response = $testClient->retrieveVatRates($request);
         $this->assertCount(1, $response->getResults());
 
@@ -286,7 +286,7 @@ class EndToEndTest extends IntegrationTestCase
                 'cache_wsdl' => WSDL_CACHE_DISK,
                 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
             ]);
-        
+
         $customClient = VatRetrievalClientFactory::create($customConfig);
         $response = $customClient->retrieveVatRates($request);
         $this->assertCount(1, $response->getResults());
@@ -304,29 +304,29 @@ class EndToEndTest extends IntegrationTestCase
 
         // Test WSDL caching
         $startTime = microtime(true);
-        
+
         // First client creation (might load WSDL)
         $client1 = VatRetrievalClientFactory::create();
         $time1 = microtime(true) - $startTime;
-        
+
         // Second client creation (should use cached WSDL)
         $startTime = microtime(true);
         $client2 = VatRetrievalClientFactory::create();
         $time2 = microtime(true) - $startTime;
-        
+
         // Second creation should be faster due to caching
         $this->assertLessThan($time1, $time2, 'Second client creation should be faster due to WSDL caching');
-        
+
         // Test compression
         $config = ClientConfiguration::production($this->logger)
             ->withSoapOptions([
                 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
             ]);
-        
+
         $compressedClient = VatRetrievalClientFactory::create($config);
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
         $response = $compressedClient->retrieveVatRates($request);
-        
+
         $this->assertCount(1, $response->getResults());
     }
 
@@ -341,16 +341,16 @@ class EndToEndTest extends IntegrationTestCase
 
         // Test with different environments
         $environments = ['production', 'test', 'development'];
-        
+
         foreach ($environments as $env) {
             $client = VatRetrievalClientFactory::createForEnvironment($env, $this->logger);
-            
+
             $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-            
+
             try {
                 $response = $client->retrieveVatRates($request);
                 $this->assertCount(1, $response->getResults());
-                
+
                 $this->logger->info('Environment test passed', [
                     'environment' => $env,
                     'result_count' => count($response->getResults()),
@@ -381,7 +381,7 @@ class EndToEndTest extends IntegrationTestCase
             memberStates: ['DE'],
             situationOn: new DateTime('2000-01-01')
         );
-        
+
         try {
             $response = $client->retrieveVatRates($oldRequest);
             // Service might return data or error for very old dates
@@ -394,7 +394,7 @@ class EndToEndTest extends IntegrationTestCase
         try {
             new VatRatesRequest(['D', 'F'], new DateTime('2024-01-01'));
             $this->fail('Should reject single character country codes');
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             $this->assertTrue(true);
         }
 
@@ -403,15 +403,15 @@ class EndToEndTest extends IntegrationTestCase
             memberStates: ['de', 'Fr', 'IT'],
             situationOn: new DateTime('2024-01-01')
         );
-        
+
         $response = $client->retrieveVatRates($mixedRequest);
-        
+
         // Verify normalization worked
         $countries = array_map(
             fn($r) => $r->getMemberState(),
             $response->getResults()
         );
-        
+
         $this->assertContains('DE', $countries);
         $this->assertContains('FR', $countries);
         $this->assertContains('IT', $countries);

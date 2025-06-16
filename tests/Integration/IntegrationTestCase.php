@@ -48,6 +48,9 @@ abstract class IntegrationTestCase extends TestCase
         // Load VCR configuration
         require_once __DIR__ . '/../fixtures/vcr-config.php';
 
+        // Turn on VCR
+        VCR::turnOn();
+
         // Create a test logger that outputs to stderr for debugging
         $this->logger = new class implements LoggerInterface {
             public function emergency(\Stringable|string $message, array $context = []): void

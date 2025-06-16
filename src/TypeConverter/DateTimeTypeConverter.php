@@ -73,8 +73,11 @@ final class DateTimeTypeConverter implements TypeConverterInterface
     public function convertXmlToPhp(string $data): DateTimeImmutable
     {
         try {
+            // Handle XML-wrapped dates from SOAP responses
+            $cleanedData = $this->extractDateFromXml($data);
+
             // Parse date and set time to start of day for consistency
-            $dateTime = new DateTimeImmutable($data);
+            $dateTime = new DateTimeImmutable($cleanedData);
 
             // Ensure time is at start of day for date-only values
             return $dateTime->setTime(0, 0, 0);
@@ -88,6 +91,31 @@ final class DateTimeTypeConverter implements TypeConverterInterface
                 $e
             );
         }
+    }
+
+    /**
+     * Extract date value from XML-wrapped content
+     *
+     * @param string $data Raw data that might be XML-wrapped
+     * @return string Clean date string
+     */
+    private function extractDateFromXml(string $data): string
+    {
+        // Check if data contains XML tags
+        if (strpos($data, '<') !== false && strpos($data, '>') !== false) {
+            // Extract content between XML tags using regex
+            if (preg_match('/>([^<]+)</', $data, $matches)) {
+                return trim($matches[1]);
+            }
+
+            // Fallback: try to extract date pattern from XML
+            if (preg_match('/(\d{4}-\d{2}-\d{2}(?:\+\d{2}:\d{2})?)/', $data, $matches)) {
+                // Remove timezone offset if present for date-only converter
+                return substr($matches[1], 0, 10);
+            }
+        }
+
+        return $data;
     }
 
     /**

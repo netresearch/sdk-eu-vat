@@ -352,17 +352,16 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 new BigDecimalTypeConverter(), // Converts xsd:decimal to Brick\Math\BigDecimal
             ]);
 
-            // 3. Create ExtSoapOptions with the ClassMap and TypeConverters
+            // 3. Create ExtSoapOptions with basic configuration
             $wsdlPath = $this->resolveWsdlPath();
 
-            // Pass classmap and typemap directly in the options array for v1.7.0 API
             $options = ExtSoapOptions::defaults($wsdlPath, [
                 'location' => $this->config->endpoint,
                 'connection_timeout' => $this->config->timeout,
-                'classmap' => $classMap,
-                'typemap' => $typeConverters,
                 ...$this->config->soapOptions
-            ]);
+            ])
+            ->withClassMap($classMap)
+            ->withTypeMap($typeConverters);
 
             // 4. Create the Engine
             $driver = ExtSoapDriver::createFromOptions($options);

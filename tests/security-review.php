@@ -17,7 +17,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
-use Netresearch\EuVatSdk\Exception\VatServiceException;
 
 echo "=== EU VAT SDK Security Review ===\n\n";
 
@@ -45,7 +44,7 @@ foreach ($sqlInjectionTests as $test) {
         $prop = $reflection->getProperty('memberStates');
         $prop->setAccessible(true);
         $values = $prop->getValue($request);
-        
+
         // Check if dangerous input was properly handled
         foreach ($values as $value) {
             if (strpos($value, ';') !== false || strpos($value, 'DROP') !== false) {
@@ -111,32 +110,32 @@ foreach ($errorScenarios as $scenario) {
             new VatRatesRequest(['DE'], new \DateTime($scenario['date']));
         } else {
             $request = new VatRatesRequest(
-                $scenario['countries'] ?? ['DE'], 
+                $scenario['countries'] ?? ['DE'],
                 new \DateTime('2024-01-01')
             );
             $client->retrieveVatRates($request);
         }
     } catch (\Exception $e) {
         $errorMsg = $e->getMessage();
-        
+
         // Check for sensitive information in error messages
         $sensitivePaths = [
             '/home/', '/var/', '/usr/', 'C:\\', 'D:\\',
             '.php', '.xml', '.wsdl', 'localhost',
             '127.0.0.1', 'database', 'password'
         ];
-        
+
         foreach ($sensitivePaths as $sensitive) {
             if (stripos($errorMsg, $sensitive) !== false) {
-                $securityWarnings[] = "Error message may contain sensitive info: " . 
+                $securityWarnings[] = "Error message may contain sensitive info: " .
                     substr($errorMsg, 0, 100) . "...";
                 break;
             }
         }
-        
+
         // Check if error provides too much detail
         if (strlen($errorMsg) > 200) {
-            $securityWarnings[] = "Error message might be too detailed (" . 
+            $securityWarnings[] = "Error message might be too detailed (" .
                 strlen($errorMsg) . " chars)";
         }
     }
@@ -154,7 +153,7 @@ if (file_exists($composerLock)) {
     $output = [];
     $returnCode = 0;
     exec('cd ' . __DIR__ . '/.. && composer audit 2>&1', $output, $returnCode);
-    
+
     if ($returnCode === 0) {
         echo "   ✓ No known vulnerabilities in dependencies\n";
         $passedChecks[] = "Dependency audit passed";
@@ -184,9 +183,9 @@ try {
                 ]
             ])
         ]);
-    
+
     $securityWarnings[] = "SDK allows disabling SSL verification";
-} catch (\Exception $e) {
+} catch (\Exception) {
     $passedChecks[] = "SDK prevents disabling SSL verification";
 }
 
@@ -209,21 +208,21 @@ echo "\n5. WSDL Security\n";
 $wsdlPath = __DIR__ . '/../resources/VatRetrievalService.wsdl';
 if (file_exists($wsdlPath)) {
     $wsdlContent = file_get_contents($wsdlPath);
-    
+
     // Check for external entity references
     if (strpos($wsdlContent, '<!ENTITY') !== false) {
         $securityIssues[] = "WSDL contains entity definitions (XXE risk)";
     } else {
         $passedChecks[] = "WSDL does not contain entity definitions";
     }
-    
+
     // Check for external imports
     if (preg_match('/<import.*location="http/i', $wsdlContent)) {
         $securityWarnings[] = "WSDL imports external resources over HTTP";
     } else {
         $passedChecks[] = "WSDL does not import external HTTP resources";
     }
-    
+
     // Check endpoint security
     if (strpos($wsdlContent, 'http://') !== false && strpos($wsdlContent, 'https://') === false) {
         $securityIssues[] = "WSDL uses non-HTTPS endpoints";
@@ -239,12 +238,14 @@ echo "\n6. Logging Security\n";
 $logOutput = '';
 $testLogger = new class extends \Psr\Log\AbstractLogger {
     private array $messages = [];
-    
-    public function log($level, \Stringable|string $message, array $context = []): void {
+
+    public function log($level, \Stringable|string $message, array $context = []): void
+    {
         $this->messages[] = "[{$level}] {$message} " . json_encode($context);
     }
-    
-    public function getOutput(): string {
+
+    public function getOutput(): string
+    {
         return implode("\n", $this->messages);
     }
 };
@@ -259,7 +260,7 @@ try {
     // Make a request with potentially sensitive data
     $request = new VatRatesRequest(['DE'], new \DateTime('2024-01-01'));
     $testClient->retrieveVatRates($request);
-} catch (\Exception $e) {
+} catch (\Exception) {
     // Ignore errors - we're checking logging
 }
 
@@ -298,7 +299,7 @@ foreach ($iterator as $file) {
     if ($file->isFile() && $file->getExtension() === 'php') {
         $filesChecked++;
         $content = file_get_contents($file->getPathname());
-        
+
         if (strpos($content, 'declare(strict_types=1);') !== false) {
             $strictTypeFiles++;
         } else {
