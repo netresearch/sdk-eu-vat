@@ -16,6 +16,9 @@
         <testsuite name="integration">
             <directory>tests/Integration</directory>
         </testsuite>
+        <testsuite name="all">
+            <directory>tests</directory>
+        </testsuite>
     </testsuites>
 
     <coverage includeUncoveredFiles="true"
@@ -39,13 +42,18 @@
 
     <php>
         <ini name="error_reporting" value="-1"/>
-        <ini name="memory_limit" value="-1"/>
+        <ini name="memory_limit" value="1G"/>
         <env name="APP_ENV" value="test"/>
+        <!-- Integration test environment variables -->
+        <env name="USE_PRODUCTION_ENDPOINT" value="false"/>
+        <env name="REFRESH_CASSETTES" value="false"/>
+        <env name="DEBUG_TESTS" value="false"/>
     </php>
 
     <groups>
         <exclude>
             <group>network</group>
+            <group>slow</group>
         </exclude>
     </groups>
 </phpunit>
