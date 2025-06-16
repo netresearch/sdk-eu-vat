@@ -13,7 +13,6 @@ use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
-use Netresearch\EuVatSdk\Exception\ParseException;
 use Netresearch\EuVatSdk\Exception\UnexpectedResponseException;
 use Netresearch\EuVatSdk\TypeConverter\DateTimeTypeConverter;
 use Netresearch\EuVatSdk\TypeConverter\BigDecimalTypeConverter;
@@ -29,29 +28,29 @@ use Soap\ExtSoapEngine\Exception\RequestException;
 
 /**
  * SOAP client implementation for EU VAT Retrieval Service
- * 
+ *
  * This client provides a complete implementation of the VatRetrievalClientInterface
  * using the php-soap/ext-soap-engine library. It integrates all SDK components:
  * - DTOs for type-safe request/response handling
  * - Custom exceptions for domain-specific error handling
  * - TypeConverters for automatic data type conversion
  * - Direct SOAP fault handling and logging
- * 
+ *
  * The client automatically handles:
  * - WSDL parsing and caching
  * - SOAP fault mapping to domain exceptions
  * - Type conversion between XML and PHP objects
  * - Connection timeouts and transport errors
- * 
+ *
  * @example Basic usage:
  * ```php
  * $config = ClientConfiguration::production($logger);
  * $client = new SoapVatRetrievalClient($config);
- * 
+ *
  * $request = new VatRatesRequest(['DE', 'FR'], new DateTime('2024-01-01'));
  * $response = $client->retrieveVatRates($request);
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Client
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -62,23 +61,23 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      * Default path to local WSDL file
      */
     private const LOCAL_WSDL_PATH = __DIR__ . '/../../resources/VatRetrievalService.wsdl';
-    
+
     /**
      * Remote WSDL URL for fallback
      */
     private const REMOTE_WSDL_URL = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService.wsdl';
-    
+
     /**
      * SOAP engine instance for making requests
      */
     private Engine $engine;
-    
-    
+
+
     /**
      * Create SOAP client with configuration
-     * 
+     *
      * @param ClientConfiguration $config Client configuration including endpoint, timeouts, etc.
-     * @param Engine|null $engine Optional pre-configured engine (for testing)
+     * @param Engine|null         $engine Optional pre-configured engine (for testing)
      * @throws ConfigurationException If client cannot be initialized
      */
     public function __construct(
@@ -87,28 +86,28 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     ) {
         $this->engine = $engine ?? $this->initializeEngine();
     }
-    
+
     /**
      * Retrieve VAT rates for specified member states
-     * 
+     *
      * This method makes a SOAP request to the EU VAT service and returns
      * the structured response as DTOs. All SOAP faults are automatically
      * mapped to domain exceptions in the catch block.
-     * 
+     *
      * @param VatRatesRequest $request Request containing member states and date
      * @return VatRatesResponse Structured response with VAT rate data
      * @throws InvalidRequestException For client-side validation errors (TEDB-100, 101, 102)
      * @throws ServiceUnavailableException For server-side errors (TEDB-400) or network issues
      * @throws ConfigurationException For WSDL or configuration errors
      * @throws VatServiceException For any other service-related errors
-     * 
+     *
      * @example Making a request:
      * ```php
      * $request = new VatRatesRequest(
      *     memberStates: ['DE', 'FR', 'IT'],
      *     situationOn: new DateTime('2024-01-01')
      * );
-     * 
+     *
      * try {
      *     $response = $client->retrieveVatRates($request);
      *     foreach ($response->getResults() as $result) {
@@ -127,7 +126,6 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             // The engine automatically converts the DTO to SOAP request structure
             // and maps the response back to the VatRatesResponse DTO
             return $this->engine->request('retrieveVatRates', [$request]);
-            
         } catch (\SoapFault $fault) {
             // Handle SOAP faults by mapping to domain-specific exceptions
             $faultCode = $fault->faultcode ?? 'UNKNOWN';
@@ -162,14 +160,14 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                     $faultCode,
                     $fault
                 ),
-                
+
                 // Server-side internal errors
                 'TEDB-400' => new ServiceUnavailableException(
                     "Internal application error in EU VAT service (TEDB-400): {$faultString}",
                     $faultCode,
                     $fault
                 ),
-                
+
                 // Unhandled SOAP faults - preserve original fault information
                 default => new SoapFaultException(
                     "SOAP fault occurred ({$faultCode}): {$faultString}",
@@ -195,15 +193,15 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             );
         }
     }
-    
+
     /**
      * Resolve WSDL path with fallback logic
-     * 
+     *
      * This method implements a fallback strategy for WSDL loading:
      * 1. Use configured WSDL path if specified and valid
      * 2. Use local bundled WSDL if available
      * 3. Fall back to remote WSDL URL
-     * 
+     *
      * @return string Valid WSDL path or URL
      * @throws ConfigurationException If no valid WSDL source can be found
      */
@@ -219,7 +217,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 }
                 return $this->config->wsdlPath;
             }
-            
+
             // Log warning about invalid configured path but continue with fallback
             if ($this->config->logger) {
                 $this->config->logger->warning('Configured WSDL path is invalid, using fallback', [
@@ -227,7 +225,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 ]);
             }
         }
-        
+
         // 2. Try local bundled WSDL
         if (file_exists(self::LOCAL_WSDL_PATH) && is_file(self::LOCAL_WSDL_PATH) && is_readable(self::LOCAL_WSDL_PATH)) {
             // Validate WSDL file integrity
@@ -240,25 +238,25 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 return self::LOCAL_WSDL_PATH;
             }
         }
-        
+
         // 3. Fall back to remote WSDL
         if ($this->config->logger) {
             $this->config->logger->info('Using remote WSDL fallback', [
                 'wsdl_url' => self::REMOTE_WSDL_URL
             ]);
         }
-        
+
         return self::REMOTE_WSDL_URL;
     }
-    
+
     /**
      * Validate WSDL file integrity
-     * 
+     *
      * Performs basic validation to ensure the WSDL file is not corrupted
      * and contains the expected service definition.
-     * 
+     *
      * @param string $wsdlPath Path to WSDL file to validate
-     * @return bool True if WSDL file appears valid
+     * @return boolean True if WSDL file appears valid
      */
     private function validateWsdlFile(string $wsdlPath): bool
     {
@@ -267,12 +265,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             if ($content === false) {
                 return false;
             }
-            
+
             // Load and validate XML structure with enhanced XPath validation
             $previousSetting = libxml_use_internal_errors(true);
             $dom = new \DOMDocument();
             $isValid = $dom->loadXML($content) !== false;
-            
+
             if (!$isValid) {
                 if ($this->config->logger) {
                     $this->config->logger->warning('WSDL file is not well-formed XML', [
@@ -282,12 +280,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 libxml_use_internal_errors($previousSetting);
                 return false;
             }
-            
+
             // Enhanced validation using XPath to check for required WSDL elements
             $xpath = new \DOMXPath($dom);
             $xpath->registerNamespace('wsdl', 'http://schemas.xmlsoap.org/wsdl/');
             $xpath->registerNamespace('soap', 'http://schemas.xmlsoap.org/wsdl/soap/');
-            
+
             // Check for required WSDL structure
             $requiredElements = [
                 '//wsdl:definitions' => 'WSDL definitions element',
@@ -295,7 +293,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 '//wsdl:portType[@name="VatRetrievalServicePortType"]' => 'VatRetrievalServicePortType interface',
                 '//wsdl:operation[@name="retrieveVatRates"]' => 'retrieveVatRates operation'
             ];
-            
+
             foreach ($requiredElements as $xpath_query => $description) {
                 $nodes = $xpath->query($xpath_query);
                 if (!$nodes || $nodes->length === 0) {
@@ -310,11 +308,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                     return false;
                 }
             }
-            
+
             libxml_use_internal_errors($previousSetting);
-            
+
             return true;
-            
         } catch (\Throwable $e) {
             if ($this->config->logger) {
                 $this->config->logger->warning('Error validating WSDL file', [
@@ -325,15 +322,15 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             return false;
         }
     }
-    
+
     /**
      * Initialize the SOAP engine with all required components
-     * 
+     *
      * This method sets up:
      * - ClassMap for DTO mapping
      * - TypeConverters for data type conversion
      * - SOAP options and configuration
-     * 
+     *
      * @return Engine Configured SOAP engine instance
      * @throws ConfigurationException If engine initialization fails
      */
@@ -357,7 +354,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             // 3. Create ExtSoapOptions with the ClassMap and TypeConverters
             $wsdlPath = $this->resolveWsdlPath();
-            
+
             // Pass classmap and typemap directly in the options array for v1.7.0 API
             $options = ExtSoapOptions::defaults($wsdlPath, [
                 'location' => $this->config->endpoint,
@@ -370,9 +367,8 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             // 4. Create the Engine
             $driver = ExtSoapDriver::createFromOptions($options);
             $transport = new ExtSoapClientTransport($driver->getClient());
-            
+
             return new SimpleEngine($driver, $transport);
-            
         } catch (\Throwable $e) {
             throw new ConfigurationException(
                 'Failed to initialize SOAP engine: ' . $e->getMessage(),
@@ -381,20 +377,20 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             );
         }
     }
-    
+
     /**
      * Get the current client configuration
-     * 
+     *
      * @return ClientConfiguration Current configuration instance
      */
     public function getConfiguration(): ClientConfiguration
     {
         return $this->config;
     }
-    
+
     /**
      * Get the SOAP engine instance (for testing/debugging)
-     * 
+     *
      * @internal This method is intended for testing and debugging only
      * @return Engine Current engine instance
      */

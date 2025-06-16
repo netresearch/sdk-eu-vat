@@ -6,32 +6,31 @@ namespace Netresearch\EuVatSdk\TypeConverter;
 
 use DateTimeImmutable;
 use DateTimeInterface;
-use DateTimeZone;
 use Netresearch\EuVatSdk\Exception\ParseException;
 use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterInterface;
 use Throwable;
 
 /**
  * Type converter for xsd:date (date without time component)
- * 
+ *
  * This converter handles automatic conversion between XML date strings and
  * PHP DateTimeImmutable objects. It handles date-only values and sets time
  * to start of day for consistency.
- * 
+ *
  * @example XML to PHP conversion:
  * ```php
  * $converter = new DateTimeTypeConverter();
  * $dateTime = $converter->convertXmlToPhp('2024-01-15T14:30:00');
  * // Returns: DateTimeImmutable object for 2024-01-15 14:30:00
  * ```
- * 
+ *
  * @example PHP to XML conversion:
  * ```php
  * $converter = new DateTimeTypeConverter();
  * $xmlDateTime = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
  * // Returns: "2024-01-15T14:30:00"
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\TypeConverter
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -40,7 +39,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
 {
     /**
      * Get the XML Schema namespace for this type
-     * 
+     *
      * @return string Always returns the W3C XML Schema namespace
      */
     public function getTypeNamespace(): string
@@ -50,7 +49,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
 
     /**
      * Get the XML Schema type name this converter handles
-     * 
+     *
      * @return string Always returns 'date' for xsd:date
      */
     public function getTypeName(): string
@@ -60,11 +59,11 @@ final class DateTimeTypeConverter implements TypeConverterInterface
 
     /**
      * Convert XML date string to PHP DateTimeImmutable
-     * 
+     *
      * @param string $data XML date string (e.g., '2024-01-15')
      * @return DateTimeImmutable PHP date object with time set to start of day
      * @throws ParseException If the date string cannot be parsed
-     * 
+     *
      * @example
      * ```php
      * $date = $converter->convertXmlToPhp('2024-01-15');
@@ -76,7 +75,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
         try {
             // Parse date and set time to start of day for consistency
             $dateTime = new DateTimeImmutable($data);
-            
+
             // Ensure time is at start of day for date-only values
             return $dateTime->setTime(0, 0, 0);
         } catch (Throwable $e) {
@@ -93,26 +92,26 @@ final class DateTimeTypeConverter implements TypeConverterInterface
 
     /**
      * Convert PHP DateTimeInterface to XML date string
-     * 
+     *
      * Returns date-only value in Y-m-d format, ignoring time component.
-     * 
+     *
      * @param mixed $data DateTimeInterface or date string
      * @return string XML date string in YYYY-MM-DD format
      * @throws ParseException If the input cannot be converted to a date
-     * 
+     *
      * @example
      * ```php
      * $xmlDate = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
      * echo $xmlDate; // "2024-01-15"
      * ```
      */
-    public function convertPhpToXml($data): string
+    public function convertPhpToXml(mixed $data): string
     {
         if ($data instanceof DateTimeInterface) {
             // Return only the date portion for xsd:date
             return $data->format('Y-m-d');
         }
-        
+
         if (is_string($data)) {
             try {
                 $dateTime = new DateTimeImmutable($data);
@@ -125,7 +124,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
                 );
             }
         }
-        
+
         throw new ParseException(
             sprintf(
                 'Cannot convert %s to XML date. Expected DateTimeInterface or string, got: %s',

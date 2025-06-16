@@ -8,11 +8,11 @@ use Throwable;
 
 /**
  * Exception for network and service availability issues
- * 
+ *
  * This exception is thrown when the EU VAT service is unavailable due to network issues,
  * service downtime, or internal server errors. It includes the TEDB-400 error code which
  * indicates internal application errors on the EU VAT service side.
- * 
+ *
  * @example Network timeout:
  * ```php
  * try {
@@ -24,7 +24,7 @@ use Throwable;
  *     $response = $client->retrieveVatRates($request);
  * }
  * ```
- * 
+ *
  * @example Handling specific TEDB-400 error:
  * ```php
  * try {
@@ -41,7 +41,7 @@ use Throwable;
  *     }
  * }
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Exception
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -49,9 +49,9 @@ use Throwable;
 class ServiceUnavailableException extends VatServiceException
 {
     /**
-     * @param string $message Error message
-     * @param string|null $errorCode Optional error code (e.g., 'TEDB-400')
-     * @param Throwable|null $previous Previous exception if any
+     * @param string         $message   Error message
+     * @param string|null    $errorCode Optional error code (e.g., 'TEDB-400')
+     * @param Throwable|null $previous  Previous exception if any
      */
     public function __construct(
         string $message = "",
@@ -63,7 +63,7 @@ class ServiceUnavailableException extends VatServiceException
 
     /**
      * Get the specific error code if available
-     * 
+     *
      * @return string|null The error code (e.g., 'TEDB-400') or null if not applicable
      */
     public function getErrorCode(): ?string

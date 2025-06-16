@@ -33,10 +33,10 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateReturnsDefaultClient(): void
     {
         $client = VatRetrievalClientFactory::create();
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
         $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
-        
+
         // Assert the configuration values
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -49,11 +49,11 @@ class VatRetrievalClientFactoryTest extends TestCase
         $config = ClientConfiguration::production($this->logger)
             ->withEndpoint('https://custom.endpoint.com')
             ->withTimeout(45);
-            
+
         $client = VatRetrievalClientFactory::create($config, $this->logger);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert custom configuration is preserved
         $clientConfig = $client->getConfiguration();
         $this->assertSame('https://custom.endpoint.com', $clientConfig->endpoint);
@@ -64,10 +64,10 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateForTestingReturnsTestClient(): void
     {
         $client = VatRetrievalClientFactory::createForTesting($this->logger);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
         $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
-        
+
         // Assert test configuration values
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_TEST, $config->endpoint);
@@ -79,9 +79,9 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateForTestingWithProductionEndpoint(): void
     {
         $client = VatRetrievalClientFactory::createForTesting($this->logger, false);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert production endpoint is used when useTestEndpoint=false
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -92,9 +92,9 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateWithTelemetryIntegratesTelemetry(): void
     {
         $client = VatRetrievalClientFactory::createWithTelemetry($this->telemetry);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert telemetry integration and default production values
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -106,15 +106,15 @@ class VatRetrievalClientFactoryTest extends TestCase
     {
         $config = ClientConfiguration::production($this->logger)
             ->withTimeout(60);
-            
+
         $client = VatRetrievalClientFactory::createWithTelemetry(
             $this->telemetry,
             $config,
             $this->logger
         );
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert custom configuration is preserved with telemetry
         $clientConfig = $client->getConfiguration();
         $this->assertSame(60, $clientConfig->timeout);
@@ -125,28 +125,28 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateWithEventSubscribersAddsSubscribers(): void
     {
         $subscribers = [$this->eventSubscriber];
-        
+
         $client = VatRetrievalClientFactory::createWithEventSubscribers($subscribers);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
     }
 
     public function testCreateWithEventSubscribersThrowsExceptionForInvalidSubscriber(): void
     {
         $invalidSubscriber = new \stdClass();
-        
+
         $this->expectException(ConfigurationException::class);
         $this->expectExceptionMessage('All event subscribers must implement EventSubscriberInterface');
-        
+
         VatRetrievalClientFactory::createWithEventSubscribers([$invalidSubscriber]);
     }
 
     public function testCreateForEnvironmentProduction(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('production');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert production environment configuration
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -157,9 +157,9 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateForEnvironmentStaging(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('staging', $this->logger);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert staging environment configuration (production endpoint, debug enabled)
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -171,9 +171,9 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateForEnvironmentDevelopment(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('development');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert development environment configuration
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_TEST, $config->endpoint);
@@ -184,9 +184,9 @@ class VatRetrievalClientFactoryTest extends TestCase
     public function testCreateForEnvironmentTesting(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('testing');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert testing environment configuration
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_TEST, $config->endpoint);
@@ -200,11 +200,11 @@ class VatRetrievalClientFactoryTest extends TestCase
             'timeout' => 120,
             'debug' => false
         ];
-        
+
         $client = VatRetrievalClientFactory::createForEnvironment('production', $this->logger, $options);
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
-        
+
         // Assert custom options override defaults
         $config = $client->getConfiguration();
         $this->assertSame(ClientConfiguration::ENDPOINT_PRODUCTION, $config->endpoint);
@@ -217,28 +217,28 @@ class VatRetrievalClientFactoryTest extends TestCase
     {
         $this->expectException(ConfigurationException::class);
         $this->expectExceptionMessage('Unsupported environment: invalid');
-        
+
         VatRetrievalClientFactory::createForEnvironment('invalid');
     }
 
     public function testCreateForEnvironmentHandlesCaseInsensitiveEnvironmentNames(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('PRODUCTION');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
     }
 
     public function testCreateForEnvironmentDevAlias(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('dev');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
     }
 
     public function testCreateForEnvironmentTestAlias(): void
     {
         $client = VatRetrievalClientFactory::createForEnvironment('test');
-        
+
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
     }
 }

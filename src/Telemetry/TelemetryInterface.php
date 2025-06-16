@@ -6,15 +6,15 @@ namespace Netresearch\EuVatSdk\Telemetry;
 
 /**
  * Interface for recording telemetry data from SDK operations
- * 
+ *
  * This interface provides hooks for recording metrics and observability data
  * from EU VAT SDK operations. It is designed to be lightweight and focused
  * on the most valuable metrics for production monitoring.
- * 
+ *
  * Unlike PSR-3 logging which records discrete events, telemetry focuses on
  * measurable metrics like counters, gauges, and timing data that can be
  * aggregated and visualized for operational insights.
- * 
+ *
  * @example Integration with monitoring systems:
  * ```php
  * class PrometheusVatTelemetry implements TelemetryInterface
@@ -24,14 +24,14 @@ namespace Netresearch\EuVatSdk\Telemetry;
  *         $this->histogram->observe($duration, ['operation' => $operation]);
  *         $this->counter->inc(['operation' => $operation, 'status' => 'success']);
  *     }
- * 
+ *
  *     public function recordError(string $operation, string $errorType, array $context = []): void
  *     {
  *         $this->counter->inc(['operation' => $operation, 'status' => 'error', 'type' => $errorType]);
  *     }
  * }
  * ```
- * 
+ *
  * @example Custom analytics integration:
  * ```php
  * class AnalyticsVatTelemetry implements TelemetryInterface
@@ -47,7 +47,7 @@ namespace Netresearch\EuVatSdk\Telemetry;
  *     }
  * }
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Telemetry
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -56,25 +56,25 @@ interface TelemetryInterface
 {
     /**
      * Record successful completion of an SDK operation
-     * 
+     *
      * This method is called when an SDK operation completes successfully,
      * providing timing and contextual information for performance monitoring.
-     * 
-     * @param string $operation The operation name (e.g., 'retrieveVatRates')
-     * @param float $duration Duration of the operation in seconds (with microsecond precision)
-     * @param array<string, mixed> $context Additional context data from the operation
-     *                                    - 'member_states': array of country codes requested
-     *                                    - 'situation_on': DateTimeInterface of the request date
-     *                                    - 'result_count': int number of results returned
-     *                                    - 'endpoint': string service endpoint used
-     * 
+     *
+     * @param string               $operation The operation name (e.g., 'retrieveVatRates')
+     * @param float                $duration  Duration of the operation in seconds (with microsecond precision)
+     * @param array<string, mixed> $context   Additional context data from the operation
+     *                                      - 'member_states': array of country codes requested
+     *                                      - 'situation_on': DateTimeInterface of the request date
+     *                                      - 'result_count': int number of results returned
+     *                                      - 'endpoint': string service endpoint used
+     *
      * @example Typical usage in client implementation:
      * ```php
      * $startTime = microtime(true);
      * try {
      *     $response = $soapClient->call($method, $arguments);
      *     $duration = microtime(true) - $startTime;
-     *     
+     *
      *     $this->telemetry->recordRequest('retrieveVatRates', $duration, [
      *         'member_states' => $request->getMemberStates(),
      *         'situation_on' => $request->getSituationOn(),
@@ -90,20 +90,20 @@ interface TelemetryInterface
 
     /**
      * Record occurrence of an error during SDK operations
-     * 
+     *
      * This method is called when an SDK operation fails, providing information
      * about error frequency and types for monitoring and alerting.
-     * 
-     * @param string $operation The operation name that failed (e.g., 'retrieveVatRates')
-     * @param string $errorType The type of error that occurred (exception class name)
-     * @param array<string, mixed> $context Additional context data about the error
-     *                                    - 'member_states': array of country codes requested
-     *                                    - 'situation_on': DateTimeInterface of the request date
-     *                                    - 'error_message': string error message
-     *                                    - 'error_code': string|int service error code (if available)
-     *                                    - 'endpoint': string service endpoint used
-     *                                    - 'duration': float time elapsed before error occurred
-     * 
+     *
+     * @param string               $operation The operation name that failed (e.g., 'retrieveVatRates')
+     * @param string               $errorType The type of error that occurred (exception class name)
+     * @param array<string, mixed> $context   Additional context data about the error
+     *                                      - 'member_states': array of country codes requested
+     *                                      - 'situation_on': DateTimeInterface of the request date
+     *                                      - 'error_message': string error message
+     *                                      - 'error_code': string|int service error code (if available)
+     *                                      - 'endpoint': string service endpoint used
+     *                                      - 'duration': float time elapsed before error occurred
+     *
      * @example Typical usage in error handling:
      * ```php
      * } catch (InvalidRequestException $e) {

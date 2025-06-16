@@ -11,7 +11,6 @@ use Rector\CodeQuality\Rector\ClassMethod\LocallyCalledStaticMethodToNonStaticRe
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessParamTagRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessReturnTagRector;
 use Rector\Php81\Rector\Property\ReadOnlyPropertyRector;
-use Rector\Php81\Rector\ClassConst\FinalizePublicClassConstantRector;
 
 return static function (RectorConfig $rectorConfig): void {
     // Paths to refactor
@@ -49,17 +48,14 @@ return static function (RectorConfig $rectorConfig): void {
         
         // PHP 8.1 features
         ReadOnlyPropertyRector::class,
-        FinalizePublicClassConstantRector::class,
     ]);
 
-    // Configure specific rules
-    $rectorConfig->ruleWithConfiguration(
-        LocallyCalledStaticMethodToNonStaticRector::class,
-        [
-            // Keep factory methods static
-            'Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory' => ['create*'],
-        ]
-    );
+    // Skip factory methods from static method conversion
+    $rectorConfig->skip([
+        LocallyCalledStaticMethodToNonStaticRector::class => [
+            __DIR__ . '/src/Factory/VatRetrievalClientFactory.php',
+        ],
+    ]);
 
     // Parallel processing
     $rectorConfig->parallel();

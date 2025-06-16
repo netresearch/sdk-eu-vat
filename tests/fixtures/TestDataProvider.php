@@ -6,10 +6,10 @@ namespace Netresearch\EuVatSdk\Tests\Fixtures;
 
 /**
  * Test data provider for EU VAT SDK tests
- * 
+ *
  * Provides realistic test data including EU member states, VAT rates,
  * edge cases, and boundary conditions for comprehensive testing.
- * 
+ *
  * @package Netresearch\EuVatSdk\Tests\Fixtures
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -18,7 +18,7 @@ class TestDataProvider
 {
     /**
      * Current EU member states (as of 2024)
-     * 
+     *
      * @var array<string>
      */
     public const EU_MEMBER_STATES = [
@@ -50,11 +50,11 @@ class TestDataProvider
         'ES', // Spain
         'SE', // Sweden
     ];
-    
+
     /**
      * Known standard VAT rates by country (as of 2024)
      * Used for validation in tests
-     * 
+     *
      * @var array<string, float>
      */
     public const STANDARD_VAT_RATES = [
@@ -86,19 +86,19 @@ class TestDataProvider
         'ES' => 21.0,
         'SE' => 25.0,
     ];
-    
+
     /**
      * Former EU member states
-     * 
+     *
      * @var array<string, string>
      */
     public const FORMER_EU_STATES = [
         'GB' => '2020-12-31', // UK left on Brexit transition end
     ];
-    
+
     /**
      * Invalid country codes for error testing
-     * 
+     *
      * @var array<string>
      */
     public const INVALID_COUNTRY_CODES = [
@@ -109,10 +109,10 @@ class TestDataProvider
         'DEU', 'FRA',     // ISO-3 instead of ISO-2
         'de', 'fr',       // Lowercase
     ];
-    
+
     /**
      * Test dates for various scenarios
-     * 
+     *
      * @return array<string, array{date: string, description: string}>
      */
     public static function getTestDates(): array
@@ -144,10 +144,10 @@ class TestDataProvider
             ],
         ];
     }
-    
+
     /**
      * Get country groups for batch testing
-     * 
+     *
      * @return array<string, array<string>>
      */
     public static function getCountryGroups(): array
@@ -164,10 +164,10 @@ class TestDataProvider
             'low_vat' => ['LU', 'MT', 'CY', 'DE', 'RO'],  // Under 20%
         ];
     }
-    
+
     /**
      * Get edge case scenarios for boundary testing
-     * 
+     *
      * @return array<string, array{countries: array<string>, date: string, description: string}>
      */
     public static function getEdgeCaseScenarios(): array
@@ -200,10 +200,10 @@ class TestDataProvider
             ],
         ];
     }
-    
+
     /**
      * Get decimal precision test cases
-     * 
+     *
      * @return array<string, array{value: string, expected_precision: int}>
      */
     public static function getDecimalPrecisionCases(): array
@@ -216,10 +216,10 @@ class TestDataProvider
             'trailing_zeros' => ['value' => '17.00', 'expected_precision' => 2],
         ];
     }
-    
+
     /**
      * Get performance test configurations
-     * 
+     *
      * @return array<string, array{batch_size: int, iterations: int, description: string}>
      */
     public static function getPerformanceTestConfigs(): array
@@ -242,13 +242,10 @@ class TestDataProvider
             ],
         ];
     }
-    
+
     /**
      * Get sample VAT rate response for unit testing
-     * 
-     * @param string $country
-     * @param string $rate
-     * @param string $date
+     *
      * @return array<string, mixed>
      */
     public static function getSampleVatRateResponse(

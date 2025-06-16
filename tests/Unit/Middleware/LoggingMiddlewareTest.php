@@ -18,19 +18,19 @@ class LoggingMiddlewareTest extends TestCase
     private LoggerInterface $logger;
     private TelemetryInterface $telemetry;
     private LoggingMiddleware $middleware;
-    
+
     protected function setUp(): void
     {
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->telemetry = $this->createMock(TelemetryInterface::class);
         $this->middleware = new LoggingMiddleware($this->logger, $this->telemetry);
     }
-    
+
     public function testProcessSuccessfulOperationLogsAndRecordsTelemetry(): void
     {
         $arguments = ['memberStates' => ['DE', 'FR']];
         $expectedResult = ['results' => ['DE' => '19%', 'FR' => '20%']];
-        
+
         // Expect initiation and completion logs
         $this->logger->expects($this->exactly(2))
             ->method('info')
@@ -41,79 +41,79 @@ class LoggingMiddlewareTest extends TestCase
                 ),
                 $this->isType('array')
             );
-        
+
         // Expect telemetry recording
         $this->telemetry->expects($this->once())
             ->method('recordRequest')
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0), // duration
-                $this->callback(function($context) {
+                $this->callback(function ($context) {
                     return $context['endpoint'] === 'EU_VAT_Service'
                         && $context['result_type'] === 'array';
                 })
             );
-        
-        $next = function($method, $args) use ($expectedResult) {
+
+        $next = function ($method, $args) use ($expectedResult) {
             $this->assertEquals('retrieveVatRates', $method);
             $this->assertEquals(['memberStates' => ['DE', 'FR']], $args);
             return $expectedResult;
         };
-        
+
         $result = $this->middleware->process('retrieveVatRates', $arguments, $next);
-        
+
         $this->assertEquals($expectedResult, $result);
     }
-    
+
     public function testProcessFailedOperationLogsErrorAndRecordsTelemetry(): void
     {
         $arguments = ['memberStates' => ['XX']]; // Invalid country
         $exception = new InvalidRequestException('Invalid country code');
-        
+
         // Expect initiation log
         $this->logger->expects($this->once())
             ->method('info')
             ->with('EU VAT SOAP Operation initiated', $this->isType('array'));
-        
+
         // Expect error log
         $this->logger->expects($this->once())
             ->method('error')
             ->with(
                 'EU VAT SOAP Operation failed',
-                $this->callback(function($context) {
+                $this->callback(function ($context) {
                     return $context['method'] === 'retrieveVatRates'
                         && $context['exception_class'] === InvalidRequestException::class
                         && $context['exception_message'] === 'Invalid country code';
                 })
             );
-        
+
         // Expect error telemetry
         $this->telemetry->expects($this->once())
             ->method('recordError')
             ->with(
                 'retrieveVatRates',
                 InvalidRequestException::class,
-                $this->callback(function($context) {
+                $this->callback(function ($context) {
                     return $context['endpoint'] === 'EU_VAT_Service'
                         && $context['error_message'] === 'Invalid country code';
                 })
             );
-        
-        $next = function($method, $args) use ($exception) {
+
+        $next = function ($method, $args) use ($exception): void {
             throw $exception;
         };
-        
+
         $this->expectException(InvalidRequestException::class);
         $this->expectExceptionMessage('Invalid country code');
-        
+
         $this->middleware->process('retrieveVatRates', $arguments, $next);
     }
-    
+
     public function testProcessWithSlowOperationLogsWarning(): void
     {
         $arguments = ['memberStates' => ['DE']];
         $result = ['results' => ['DE' => '19%']];
-        
+
         // Expect logs for slow operation
         $this->logger->expects($this->exactly(2))
             ->method('info')
@@ -124,82 +124,83 @@ class LoggingMiddlewareTest extends TestCase
                 ),
                 $this->isType('array')
             );
-        
+
         $this->telemetry->expects($this->once())
             ->method('recordRequest');
-        
-        $next = function($method, $args) use ($result) {
+
+        $next = function ($method, $args) use ($result) {
             // Simulate slow operation
             usleep(10000); // 10ms delay (not actually slow but will be > 0)
             return $result;
         };
-        
+
         $actualResult = $this->middleware->process('retrieveVatRates', $arguments, $next);
         $this->assertEquals($result, $actualResult);
     }
-    
+
     public function testProcessWithVatRatesMethodIncludesCountryContext(): void
     {
         $arguments = ['memberStates' => ['DE', 'FR', 'IT']];
         $result = ['results' => []];
-        
+
         $this->logger->expects($this->exactly(2))
             ->method('info');
-        
+
         // Verify telemetry includes country-specific context
         $this->telemetry->expects($this->once())
             ->method('recordRequest')
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0),
-                $this->callback(function($context) {
+                $this->callback(function ($context) {
                     return isset($context['member_states'])
                         && $context['member_states'] === ['DE', 'FR', 'IT']
                         && $context['country_count'] === 3;
                 })
             );
-        
-        $next = function($method, $args) use ($result) {
+
+        $next = function ($method, $args) use ($result) {
             return $result;
         };
-        
+
         $this->middleware->process('retrieveVatRates', $arguments, $next);
     }
-    
+
     public function testProcessWithNonArrayMemberStatesHandledCorrectly(): void
     {
         $arguments = ['memberStates' => 'DE']; // Single string instead of array
         $result = ['results' => []];
-        
+
         $this->telemetry->expects($this->once())
             ->method('recordRequest')
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0),
-                $this->callback(function($context) {
+                $this->callback(function ($context) {
                     return $context['member_states'] === ['DE']
                         && $context['country_count'] === 1;
                 })
             );
-        
-        $next = function($method, $args) use ($result) {
+
+        $next = function ($method, $args) use ($result) {
             return $result;
         };
-        
+
         $this->middleware->process('retrieveVatRates', $arguments, $next);
     }
-    
+
     public function testProcessWithResponseObjectHavingGetResultsMethod(): void
     {
         $arguments = ['memberStates' => ['DE']];
-        
+
         // Create anonymous class with getResults method
         $mockResponse = new class {
-            public function getResults() {
+            public function getResults()
+            {
                 return ['item1', 'item2'];
             }
         };
-        
+
         $this->logger->expects($this->exactly(2))
             ->method('info')
             ->with(
@@ -209,51 +210,51 @@ class LoggingMiddlewareTest extends TestCase
                 ),
                 $this->isType('array')
             );
-        
-        $next = function($method, $args) use ($mockResponse) {
+
+        $next = function ($method, $args) use ($mockResponse) {
             return $mockResponse;
         };
-        
+
         $result = $this->middleware->process('retrieveVatRates', $arguments, $next);
         $this->assertSame($mockResponse, $result);
     }
-    
+
     public function testGetLoggerReturnsLoggerInstance(): void
     {
         $this->assertSame($this->logger, $this->middleware->getLogger());
     }
-    
+
     public function testGetTelemetryReturnsTelemetryInstance(): void
     {
         $this->assertSame($this->telemetry, $this->middleware->getTelemetry());
     }
-    
+
     public function testProcessWithErrorInTelemetryStillPropagatesOriginalException(): void
     {
         $arguments = ['test' => 'data'];
         $originalException = new InvalidRequestException('Original error');
-        
+
         // Make telemetry throw an exception
         $this->telemetry->expects($this->once())
             ->method('recordError')
             ->willThrowException(new \RuntimeException('Telemetry error'));
-        
-        $next = function($method, $args) use ($originalException) {
+
+        $next = function ($method, $args) use ($originalException): void {
             throw $originalException;
         };
-        
+
         // Should still throw the original exception, not the telemetry error
         $this->expectException(InvalidRequestException::class);
         $this->expectExceptionMessage('Original error');
-        
+
         $this->middleware->process('testMethod', $arguments, $next);
     }
-    
+
     public function testProcessWithNullArgumentsHandled(): void
     {
         $arguments = [];
         $result = 'test result';
-        
+
         $this->logger->expects($this->exactly(2))
             ->method('info')
             ->with(
@@ -263,11 +264,11 @@ class LoggingMiddlewareTest extends TestCase
                 ),
                 $this->isType('array')
             );
-        
-        $next = function($method, $args) use ($result) {
+
+        $next = function ($method, $args) use ($result) {
             return $result;
         };
-        
+
         $actualResult = $this->middleware->process('testMethod', $arguments, $next);
         $this->assertEquals($result, $actualResult);
     }

@@ -19,40 +19,40 @@ class VatRateResultTest extends TestCase
         $rate = new VatRate('STANDARD', '19.0');
         $date = new DateTime('2024-01-01');
         $result = new VatRateResult('DE', $rate, $date, 'Test comment');
-        
+
         $this->assertEquals('DE', $result->getMemberState());
         $this->assertSame($rate, $result->getRate());
         $this->assertSame($date, $result->getSituationOn());
         $this->assertEquals('Test comment', $result->getComment());
     }
-    
+
     public function testMemberStateNormalization(): void
     {
         $rate = new VatRate('STANDARD', '19.0');
         $date = new DateTime('2024-01-01');
-        
+
         // Test lowercase normalization
         $result = new VatRateResult('de', $rate, $date);
         $this->assertEquals('DE', $result->getMemberState());
-        
+
         // Test whitespace trimming
         $result = new VatRateResult('  fr  ', $rate, $date);
         $this->assertEquals('FR', $result->getMemberState());
-        
+
         // Test mixed case
         $result = new VatRateResult('It', $rate, $date);
         $this->assertEquals('IT', $result->getMemberState());
     }
-    
+
     public function testOptionalComment(): void
     {
         $rate = new VatRate('STANDARD', '19.0');
         $date = new DateTime('2024-01-01');
-        
+
         // Without comment
         $result = new VatRateResult('DE', $rate, $date);
         $this->assertNull($result->getComment());
-        
+
         // With comment
         $result = new VatRateResult('DE', $rate, $date, 'Special rate');
         $this->assertEquals('Special rate', $result->getComment());

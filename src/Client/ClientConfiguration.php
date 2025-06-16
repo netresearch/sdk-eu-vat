@@ -12,21 +12,21 @@ use Psr\Log\NullLogger;
 
 /**
  * Immutable configuration object for VAT retrieval client
- * 
+ *
  * This class provides a type-safe, immutable configuration container with
  * fluent interface for building client configurations. It follows the
  * builder pattern with factory methods for common scenarios.
- * 
+ *
  * The configuration object is immutable - all modification methods return
  * new instances rather than modifying the existing instance, ensuring
  * thread safety and preventing accidental configuration changes.
- * 
+ *
  * @example Basic production configuration:
  * ```php
  * $config = ClientConfiguration::production();
  * $client = new SoapVatRetrievalClient($config);
  * ```
- * 
+ *
  * @example Custom configuration with fluent interface:
  * ```php
  * $config = ClientConfiguration::production()
@@ -35,13 +35,13 @@ use Psr\Log\NullLogger;
  *     ->withLogger($psrLogger)
  *     ->withTelemetry($telemetryImplementation);
  * ```
- * 
+ *
  * @example Test environment configuration:
  * ```php
  * $config = ClientConfiguration::test($logger)
  *     ->withTimeout(120); // Longer timeout for test environment
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Client
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -52,17 +52,17 @@ final class ClientConfiguration
      * EU VAT Retrieval Service production endpoint
      */
     public const ENDPOINT_PRODUCTION = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService';
-    
+
     /**
      * EU VAT Retrieval Service acceptance/test endpoint
      */
     public const ENDPOINT_TEST = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC';
-    
+
     /**
      * Default connection timeout in seconds
      */
     public const DEFAULT_TIMEOUT = 30;
-    
+
     /**
      * Maximum reasonable timeout in seconds
      */
@@ -72,66 +72,66 @@ final class ClientConfiguration
      * Service endpoint URL for SOAP requests
      */
     public readonly string $endpoint;
-    
+
     /**
      * SOAP client options array
-     * 
+     *
      * @var array<string, mixed>
      */
     public readonly array $soapOptions;
-    
+
     /**
      * Connection timeout in seconds
      */
     public readonly int $timeout;
-    
+
     /**
      * Enable debug mode for verbose logging
      */
     public readonly bool $debug;
-    
+
     /**
      * PSR-3 logger implementation
      */
     public readonly LoggerInterface $logger;
-    
+
     /**
      * Local WSDL file path (null for remote WSDL)
      */
     public readonly ?string $wsdlPath;
-    
+
     /**
      * Telemetry implementation for observability
      */
     public readonly TelemetryInterface $telemetry;
-    
+
     /**
      * Array of event subscriber objects for extension
-     * 
+     *
      * @var array<object>
      */
     public readonly array $eventSubscribers;
-    
+
     /**
      * Array of middleware objects for request/response processing
-     * 
+     *
      * @var array<object>
      */
     public readonly array $middleware;
 
     /**
      * Private constructor enforces use of factory methods
-     * 
-     * @param string $endpoint Service endpoint URL
-     * @param array<string, mixed> $soapOptions SOAP client configuration options
-     * @param int $timeout Connection timeout in seconds
-     * @param bool $debug Enable debug mode
-     * @param LoggerInterface $logger PSR-3 logger implementation
-     * @param string|null $wsdlPath Local WSDL file path
-     * @param TelemetryInterface $telemetry Telemetry implementation
-     * @param array<object> $eventSubscribers Event subscriber objects
-     * @param array<object> $middleware Middleware objects
-     * 
+     *
+     * @param string               $endpoint         Service endpoint URL
+     * @param array<string, mixed> $soapOptions      SOAP client configuration options
+     * @param integer              $timeout          Connection timeout in seconds
+     * @param boolean              $debug            Enable debug mode
+     * @param LoggerInterface      $logger           PSR-3 logger implementation
+     * @param string|null          $wsdlPath         Local WSDL file path
+     * @param TelemetryInterface   $telemetry        Telemetry implementation
+     * @param array<object>        $eventSubscribers Event subscriber objects
+     * @param array<object>        $middleware       Middleware objects
+     *
      * @throws ConfigurationException If configuration values are invalid
      */
     private function __construct(
@@ -146,7 +146,7 @@ final class ClientConfiguration
         array $middleware
     ) {
         $this->validateConfiguration($endpoint, $timeout, $wsdlPath);
-        
+
         $this->endpoint = $endpoint;
         $this->timeout = $timeout;
         $this->debug = $debug;
@@ -155,7 +155,7 @@ final class ClientConfiguration
         $this->telemetry = $telemetry;
         $this->eventSubscribers = $eventSubscribers;
         $this->middleware = $middleware;
-        
+
         // Merge SOAP options with defaults, ensuring timeout and debug are always current
         $defaultOptions = [
             'connection_timeout' => $timeout,
@@ -164,7 +164,7 @@ final class ClientConfiguration
             'trace' => $debug,
             'exceptions' => true,
         ];
-        
+
         // User-provided options override defaults, but timeout and debug always reflect current values
         $this->soapOptions = array_merge($defaultOptions, $soapOptions, [
             'connection_timeout' => $timeout,
@@ -174,15 +174,15 @@ final class ClientConfiguration
 
     /**
      * Create production configuration with recommended defaults
-     * 
+     *
      * @param LoggerInterface|null $logger Optional PSR-3 logger (defaults to NullLogger)
      * @return self New configuration instance for production use
-     * 
+     *
      * @example Basic production setup:
      * ```php
      * $config = ClientConfiguration::production();
      * ```
-     * 
+     *
      * @example Production with logging:
      * ```php
      * $config = ClientConfiguration::production($monologLogger);
@@ -205,10 +205,10 @@ final class ClientConfiguration
 
     /**
      * Create test/acceptance configuration with debug enabled
-     * 
+     *
      * @param LoggerInterface|null $logger Optional PSR-3 logger (defaults to NullLogger)
      * @return self New configuration instance for test environment
-     * 
+     *
      * @example Test environment setup:
      * ```php
      * $config = ClientConfiguration::test($testLogger);
@@ -231,10 +231,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with custom endpoint
-     * 
+     *
      * @param string $endpoint Service endpoint URL
      * @return self New configuration instance with updated endpoint
-     * 
+     *
      * @example Set custom endpoint:
      * ```php
      * $config = ClientConfiguration::production()
@@ -258,12 +258,12 @@ final class ClientConfiguration
 
     /**
      * Create new instance with modified timeout
-     * 
-     * @param int $seconds Connection timeout in seconds (1-300)
+     *
+     * @param integer $seconds Connection timeout in seconds (1-300)
      * @return self New configuration instance with updated timeout
-     * 
+     *
      * @throws ConfigurationException If timeout is out of valid range
-     * 
+     *
      * @example Increase timeout for slow networks:
      * ```php
      * $config = ClientConfiguration::production()->withTimeout(60);
@@ -286,10 +286,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with modified debug mode
-     * 
-     * @param bool $enabled Enable or disable debug mode
+     *
+     * @param boolean $enabled Enable or disable debug mode
      * @return self New configuration instance with updated debug setting
-     * 
+     *
      * @example Enable debug for troubleshooting:
      * ```php
      * $config = ClientConfiguration::production()->withDebug(true);
@@ -312,10 +312,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with modified logger
-     * 
+     *
      * @param LoggerInterface $logger PSR-3 compatible logger
      * @return self New configuration instance with updated logger
-     * 
+     *
      * @example Add custom logger:
      * ```php
      * $config = ClientConfiguration::production()->withLogger($monologLogger);
@@ -338,12 +338,12 @@ final class ClientConfiguration
 
     /**
      * Create new instance with modified WSDL path
-     * 
+     *
      * @param string|null $path Local WSDL file path (null for remote WSDL)
      * @return self New configuration instance with updated WSDL path
-     * 
+     *
      * @throws ConfigurationException If WSDL file doesn't exist or isn't readable
-     * 
+     *
      * @example Use local WSDL file:
      * ```php
      * $config = ClientConfiguration::production()
@@ -367,10 +367,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with modified telemetry implementation
-     * 
+     *
      * @param TelemetryInterface $telemetry Telemetry implementation for observability
      * @return self New configuration instance with updated telemetry
-     * 
+     *
      * @example Add custom telemetry:
      * ```php
      * $config = ClientConfiguration::production()
@@ -394,10 +394,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with additional SOAP options
-     * 
+     *
      * @param array<string, mixed> $options SOAP client options to merge
      * @return self New configuration instance with merged SOAP options
-     * 
+     *
      * @example Add custom SOAP options:
      * ```php
      * $config = ClientConfiguration::production()
@@ -408,7 +408,7 @@ final class ClientConfiguration
     {
         // Merge new options with existing ones, new options take precedence
         $mergedOptions = array_merge($this->soapOptions, $options);
-        
+
         return new self(
             $this->endpoint,
             $mergedOptions, // Updated value
@@ -424,10 +424,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with additional event subscriber
-     * 
+     *
      * @param object $subscriber Event subscriber object
      * @return self New configuration instance with added event subscriber
-     * 
+     *
      * @example Add custom event subscriber:
      * ```php
      * $config = ClientConfiguration::production()
@@ -451,10 +451,10 @@ final class ClientConfiguration
 
     /**
      * Create new instance with additional middleware
-     * 
+     *
      * @param object $middleware Middleware object
      * @return self New configuration instance with added middleware
-     * 
+     *
      * @example Add custom middleware:
      * ```php
      * $config = ClientConfiguration::production()
@@ -478,11 +478,11 @@ final class ClientConfiguration
 
     /**
      * Validate configuration parameters
-     * 
-     * @param string $endpoint Service endpoint URL
-     * @param int $timeout Connection timeout in seconds
+     *
+     * @param string      $endpoint Service endpoint URL
+     * @param integer     $timeout  Connection timeout in seconds
      * @param string|null $wsdlPath Local WSDL file path
-     * 
+     *
      * @throws ConfigurationException If any parameter is invalid
      */
     private function validateConfiguration(string $endpoint, int $timeout, ?string $wsdlPath): void

@@ -8,11 +8,11 @@ use Exception;
 
 /**
  * Base exception for all EU VAT SDK errors
- * 
+ *
  * This abstract class serves as the foundation for all exceptions thrown by the EU VAT SDK.
  * It allows consumers to catch all SDK-specific exceptions with a single catch block while
  * still providing specific exception types for more granular error handling.
- * 
+ *
  * @example Catching all SDK exceptions:
  * ```php
  * try {
@@ -22,7 +22,7 @@ use Exception;
  *     $logger->error('EU VAT SDK error: ' . $e->getMessage());
  * }
  * ```
- * 
+ *
  * @example Catching specific exceptions:
  * ```php
  * try {
@@ -35,7 +35,7 @@ use Exception;
  *     // Handle any other SDK errors
  * }
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Exception
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License

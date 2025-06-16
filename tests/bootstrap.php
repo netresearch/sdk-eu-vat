@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 /**
  * PHPUnit bootstrap file for EU VAT SDK tests
- * 
+ *
  * This file is loaded before any tests run and provides common setup
  * for both unit and integration tests.
- * 
+ *
  * @package Netresearch\EuVatSdk\Tests
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -69,7 +69,7 @@ if (!function_exists('assertValidEuCountryCode')) {
             'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
             'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
         ];
-        
+
         PHPUnit\Framework\Assert::assertContains(
             $countryCode,
             $validCodes,
@@ -89,14 +89,14 @@ if (!function_exists('assertValidVatRate')) {
             $rate,
             "'{$rate}' is not a valid VAT rate format"
         );
-        
+
         $rateDecimal = \Brick\Math\BigDecimal::of($rate);
-        
+
         PHPUnit\Framework\Assert::assertTrue(
             $rateDecimal->isGreaterThanOrEqualTo('0'),
             "VAT rate cannot be negative"
         );
-        
+
         PHPUnit\Framework\Assert::assertTrue(
             $rateDecimal->isLessThanOrEqualTo('50.0'),
             "VAT rate seems unreasonably high"

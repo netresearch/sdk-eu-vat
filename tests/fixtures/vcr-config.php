@@ -6,10 +6,10 @@ use VCR\VCR;
 
 /**
  * PHP-VCR Configuration for EU VAT SDK Integration Tests
- * 
+ *
  * This configuration sets up VCR for recording and replaying HTTP/SOAP interactions
  * with the EU VAT Retrieval Service, enabling reliable offline testing.
- * 
+ *
  * @package Netresearch\EuVatSdk\Tests
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -19,16 +19,16 @@ use VCR\VCR;
 VCR::configure()
     // Set the storage path for cassettes
     ->setCassettePath(__DIR__ . '/cassettes')
-    
+
     // Set the storage format to JSON for better readability
     ->setStorage('json')
-    
+
     // Enable request matching by method, URL, and body
     ->setMode('once')
-    
+
     // Configure request matching rules
     ->enableRequestMatchers(['method', 'url', 'body'])
-    
+
     // Set up whitelist for allowed requests
     ->setWhiteList([
         'allow' => [
@@ -37,7 +37,7 @@ VCR::configure()
             'https://ec.europa.eu/taxation_customs/tedb/ws-test/VatRetrievalService',
         ],
     ])
-    
+
     // Configure SOAP-specific settings
     ->addRequestMatcher(
         'soap_action',

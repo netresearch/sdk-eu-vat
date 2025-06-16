@@ -12,17 +12,17 @@ use SoapFault;
 
 /**
  * Event listener for mapping SOAP faults to domain-specific exceptions
- * 
+ *
  * This listener intercepts SOAP faults from the EU VAT service and transforms
  * them into domain-specific exceptions with enhanced error context. It maps
  * specific fault codes to appropriate exception types based on the service
  * documentation.
- * 
+ *
  * Fault Code Mappings:
  * - TEDB-100, TEDB-101, TEDB-102: Client-side validation errors → InvalidRequestException
- * - TEDB-400: Server-side internal errors → ServiceUnavailableException  
+ * - TEDB-400: Server-side internal errors → ServiceUnavailableException
  * - Other faults: Generic SOAP errors → SoapFaultException
- * 
+ *
  * @example Integration with SOAP client:
  * ```php
  * try {
@@ -32,7 +32,7 @@ use SoapFault;
  *     $listener->handleSoapFault($fault); // Throws domain exception
  * }
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\EventListener
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
@@ -46,7 +46,7 @@ final class FaultEventListener
 
     /**
      * Create fault event listener with logger
-     * 
+     *
      * @param LoggerInterface $logger PSR-3 logger for fault recording
      */
     public function __construct(LoggerInterface $logger)
@@ -56,16 +56,16 @@ final class FaultEventListener
 
     /**
      * Handle SOAP fault by mapping to domain exception
-     * 
+     *
      * This method analyzes the SOAP fault and creates an appropriate domain
      * exception with enhanced error context. The original fault is preserved
      * as the previous exception for full stack trace information.
-     * 
+     *
      * @param SoapFault $fault Original SOAP fault from service
      * @throws InvalidRequestException For client-side validation errors (TEDB-100, 101, 102)
      * @throws ServiceUnavailableException For server-side errors (TEDB-400)
      * @throws SoapFaultException For unhandled SOAP faults
-     * 
+     *
      * @example Fault handling in client:
      * ```php
      * try {
@@ -107,14 +107,14 @@ final class FaultEventListener
                 $faultCode,
                 $fault
             ),
-            
+
             // Server-side internal errors
             'TEDB-400' => new ServiceUnavailableException(
                 "Internal application error in EU VAT service (TEDB-400): {$faultString}",
                 $faultCode,
                 $fault
             ),
-            
+
             // Unhandled SOAP faults - preserve original fault information
             default => new SoapFaultException(
                 "SOAP fault occurred ({$faultCode}): {$faultString}",
@@ -129,10 +129,10 @@ final class FaultEventListener
 
     /**
      * Check if a fault code represents a client-side validation error
-     * 
+     *
      * @param string $faultCode Fault code to check
-     * @return bool True if this is a client validation error
-     * 
+     * @return boolean True if this is a client validation error
+     *
      * @example Usage in error categorization:
      * ```php
      * if ($listener->isClientValidationError($faultCode)) {
@@ -149,9 +149,9 @@ final class FaultEventListener
 
     /**
      * Check if a fault code represents a server-side error
-     * 
+     *
      * @param string $faultCode Fault code to check
-     * @return bool True if this is a server-side error
+     * @return boolean True if this is a server-side error
      */
     public function isServerError(string $faultCode): bool
     {
@@ -160,14 +160,14 @@ final class FaultEventListener
 
     /**
      * Extract structured error details from fault detail property
-     * 
+     *
      * The SOAP fault detail can contain structured XML with additional
      * error information. This method attempts to extract useful details.
-     * 
+     *
      * @param mixed $faultDetail Raw fault detail from SoapFault
      * @return array<string, mixed> Extracted error details
      */
-    public function extractErrorDetails($faultDetail): array
+    public function extractErrorDetails(mixed $faultDetail): array
     {
         if ($faultDetail === null) {
             return [];
@@ -182,7 +182,7 @@ final class FaultEventListener
         if (is_string($faultDetail)) {
             $previousUseErrors = libxml_use_internal_errors(true);
             $dom = new \DOMDocument();
-            
+
             if ($dom->loadXML($faultDetail)) {
                 // Successfully parsed as XML - extract key information
                 $details = [];
@@ -193,9 +193,9 @@ final class FaultEventListener
                 libxml_use_internal_errors($previousUseErrors);
                 return $details;
             }
-            
+
             libxml_use_internal_errors($previousUseErrors);
-            
+
             // Not valid XML, return as plain text
             return ['raw_detail' => $faultDetail];
         }

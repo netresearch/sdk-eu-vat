@@ -6,14 +6,14 @@ namespace Netresearch\EuVatSdk\Exception;
 
 /**
  * Exception for DTO validation failures
- * 
+ *
  * This exception is thrown when data transfer objects (DTOs) receive invalid data
  * during construction or when validation methods detect invalid input. Common cases include:
  * - Invalid country codes (not 2 characters, not uppercase)
  * - Empty member states array
  * - Invalid date ranges
  * - Out-of-bounds numeric values
- * 
+ *
  * @example Invalid country code format:
  * ```php
  * try {
@@ -23,7 +23,7 @@ namespace Netresearch\EuVatSdk\Exception;
  *     // Output: Validation error: Invalid member state code provided: de
  * }
  * ```
- * 
+ *
  * @example Empty member states:
  * ```php
  * try {
@@ -33,7 +33,7 @@ namespace Netresearch\EuVatSdk\Exception;
  *     // Output: Validation error: Member states array cannot be empty.
  * }
  * ```
- * 
+ *
  * @example Future date validation:
  * ```php
  * try {
@@ -44,7 +44,7 @@ namespace Netresearch\EuVatSdk\Exception;
  *     // Output: Validation error: Date cannot be more than 5 years in the future
  * }
  * ```
- * 
+ *
  * @package Netresearch\EuVatSdk\Exception
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
