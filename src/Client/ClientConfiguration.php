@@ -230,6 +230,33 @@ final class ClientConfiguration
     }
 
     /**
+     * Create new instance with custom endpoint
+     * 
+     * @param string $endpoint Service endpoint URL
+     * @return self New configuration instance with updated endpoint
+     * 
+     * @example Set custom endpoint:
+     * ```php
+     * $config = ClientConfiguration::production()
+     *     ->withEndpoint('https://custom.endpoint.com');
+     * ```
+     */
+    public function withEndpoint(string $endpoint): self
+    {
+        return new self(
+            $endpoint, // Updated value
+            $this->soapOptions,
+            $this->timeout,
+            $this->debug,
+            $this->logger,
+            $this->wsdlPath,
+            $this->telemetry,
+            $this->eventSubscribers,
+            $this->middleware
+        );
+    }
+
+    /**
      * Create new instance with modified timeout
      * 
      * @param int $seconds Connection timeout in seconds (1-300)

@@ -130,7 +130,7 @@ class SoapVatRetrievalClientTest extends TestCase
         $client = new SoapVatRetrievalClient($this->config, $mockEngine);
         
         $this->expectException(SoapFaultException::class);
-        $this->expectExceptionMessage('Unhandled SOAP fault: Unknown fault');
+        $this->expectExceptionMessage('SOAP fault occurred (TEDB-999): Unknown fault');
         
         $client->retrieveVatRates($request);
     }
