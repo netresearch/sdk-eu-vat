@@ -124,7 +124,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     {
         try {
             // The engine automatically converts the DTO to SOAP request structure
-            // and maps the response back to the VatRatesResponse DTO
+            // and maps the response back to the VatRatesResponse DTO using ClassMap
             return $this->engine->request('retrieveVatRates', [$request]);
         } catch (\SoapFault $fault) {
             // Handle SOAP faults by mapping to domain-specific exceptions
@@ -337,13 +337,13 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     private function initializeEngine(): Engine
     {
         try {
-            // 1. Define the ClassMap to map WSDL types to PHP DTOs
-            // Note: These type names should match the WSDL complex type definitions
+            // 1. Define the ClassMap to map WSDL elements to PHP DTOs
+            // Note: ClassMap keys must match XML element names from SOAP messages, not XSD type names
             $classMap = new ClassMapCollection(
-                new ClassMap('retrieveVatRates', VatRatesRequest::class),
-                new ClassMap('retrieveVatRatesResponse', VatRatesResponse::class),
-                new ClassMap('vatRateResult', VatRateResult::class),
-                new ClassMap('vatRate', VatRate::class)
+                new ClassMap('retrieveVatRatesReqMsg', VatRatesRequest::class),   // Request element name
+                new ClassMap('retrieveVatRatesRespMsg', VatRatesResponse::class), // Response element name
+                new ClassMap('vatRateResults', VatRateResult::class),             // Nested element for rate results
+                new ClassMap('rateValueType', VatRate::class),                    // Named type for rate values
             );
 
             // 2. Define TypeConverters for custom data types
