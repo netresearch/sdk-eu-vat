@@ -147,7 +147,7 @@ final class BigDecimalTypeConverter implements TypeConverterInterface
         throw new ParseException(
             sprintf(
                 'Cannot convert %s to XML decimal. Expected BigDecimal, numeric value, or numeric string, got: %s',
-                is_object($data) ? get_class($data) : gettype($data),
+                get_debug_type($data),
                 is_scalar($data) ? (string) $data : 'non-scalar'
             )
         );

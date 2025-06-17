@@ -102,7 +102,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
     private function extractDateFromXml(string $data): string
     {
         // Check if data contains XML tags
-        if (strpos($data, '<') !== false && strpos($data, '>') !== false) {
+        if (str_contains($data, '<') && str_contains($data, '>')) {
             // Extract content between XML tags using regex
             if (preg_match('/>([^<]+)</', $data, $matches)) {
                 return trim($matches[1]);
@@ -156,7 +156,7 @@ final class DateTimeTypeConverter implements TypeConverterInterface
         throw new ParseException(
             sprintf(
                 'Cannot convert %s to XML date. Expected DateTimeInterface or string, got: %s',
-                is_object($data) ? get_class($data) : gettype($data),
+                get_debug_type($data),
                 is_scalar($data) ? (string) $data : 'non-scalar'
             )
         );
