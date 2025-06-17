@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use VCR\VCR;
+use Brick\Math\BigDecimal;
+
 /**
  * Performance benchmark script for EU VAT SDK
  *
@@ -28,7 +31,7 @@ $logger->pushHandler(new StreamHandler('php://stderr', Logger::WARNING));
 
 // Configure VCR for benchmarks
 require_once __DIR__ . '/fixtures/vcr-config.php';
-\VCR\VCR::insertCassette('benchmark-performance');
+VCR::insertCassette('benchmark-performance');
 
 $results = [];
 
@@ -217,8 +220,8 @@ $iterations = 10000;
 $start = microtime(true);
 
 for ($i = 0; $i < $iterations; $i++) {
-    $net = \Brick\Math\BigDecimal::of('999.99');
-    $rate = \Brick\Math\BigDecimal::of('19.0');
+    $net = BigDecimal::of('999.99');
+    $rate = BigDecimal::of('19.0');
     $vat = $net->multipliedBy($rate)->dividedBy('100', 2);
     $gross = $net->plus($vat);
 }
@@ -267,5 +270,5 @@ file_put_contents($resultsFile, json_encode($results, JSON_PRETTY_PRINT));
 echo "\nResults saved to: benchmark-results.json\n";
 
 // Cleanup
-\VCR\VCR::eject();
-\VCR\VCR::turnOff();
+VCR::eject();
+VCR::turnOff();

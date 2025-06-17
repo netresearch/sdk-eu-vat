@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Integration;
 
+use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
+use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
 use DateTime;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
@@ -105,11 +108,10 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
             $response = $this->client->retrieveVatRates($request);
 
             // If no exception, verify the response handling
-            $this->assertInstanceOf(\Netresearch\EuVatSdk\DTO\Response\VatRatesResponse::class, $response);
+            $this->assertInstanceOf(VatRatesResponse::class, $response);
 
             // Future dates might return current rates or throw an error
-            if (count($response->getResults()) > 0) {
-                $this->logger->warning('Service returned rates for future date - this behavior may change');
+            if ($response->getResults() !== []) {
             }
         } catch (InvalidRequestException $e) {
             // Service might reject far future dates
@@ -210,10 +212,10 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
     public function testTimeoutHandling(): void
     {
         // Create a client with very short timeout
-        $config = \Netresearch\EuVatSdk\Client\ClientConfiguration::test($this->logger)
+        $config = ClientConfiguration::test()
             ->withTimeout(1); // 1 second timeout
 
-        $client = new \Netresearch\EuVatSdk\Client\SoapVatRetrievalClient($config);
+        $client = new SoapVatRetrievalClient($config);
 
         // Don't use VCR for timeout test - we need real network behavior
         VCR::turnOff();

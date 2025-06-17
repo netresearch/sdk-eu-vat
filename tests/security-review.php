@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Psr\Log\AbstractLogger;
+
 /**
  * Security review script for EU VAT SDK
  *
@@ -47,11 +50,11 @@ foreach ($sqlInjectionTests as $test) {
 
         // Check if dangerous input was properly handled
         foreach ($values as $value) {
-            if (strpos($value, ';') !== false || strpos($value, 'DROP') !== false) {
+            if (str_contains((string) $value, ';') || str_contains((string) $value, 'DROP')) {
                 $securityIssues[] = "SQL injection payload not sanitized: $value";
             }
         }
-    } catch (\Exception $e) {
+    } catch (\Exception) {
         // Good - input was rejected
         $passedChecks[] = "SQL injection attempt blocked: " . implode(', ', $test);
     }
@@ -68,7 +71,7 @@ foreach ($xssTests as $test) {
     try {
         $request = new VatRatesRequest($test, new \DateTime('2024-01-01'));
         $securityWarnings[] = "XSS payload accepted in input: " . implode(', ', $test);
-    } catch (\Exception $e) {
+    } catch (\Exception) {
         $passedChecks[] = "XSS attempt blocked: " . implode(', ', $test);
     }
 }
@@ -83,13 +86,13 @@ foreach ($xmlInjectionTests as $test) {
     try {
         $request = new VatRatesRequest($test, new \DateTime('2024-01-01'));
         $securityIssues[] = "XML injection payload accepted: " . implode(', ', $test);
-    } catch (\Exception $e) {
+    } catch (\Exception) {
         $passedChecks[] = "XML injection attempt blocked: " . implode(', ', $test);
     }
 }
 
 echo "   ✓ Tested " . count($passedChecks) . " injection attempts\n";
-if (!empty($securityIssues)) {
+if ($securityIssues !== []) {
     echo "   ✗ Found " . count($securityIssues) . " input validation issues\n";
 }
 
@@ -160,7 +163,7 @@ if (file_exists($composerLock)) {
         $passedChecks[] = "Dependency audit passed";
     } else {
         $auditOutput = implode("\n", $output);
-        if (strpos($auditOutput, 'vulnerabilit') !== false) {
+        if (str_contains($auditOutput, 'vulnerabilit')) {
             $securityIssues[] = "Composer audit found vulnerabilities";
             echo "   ✗ Vulnerabilities found in dependencies\n";
         }
@@ -175,7 +178,7 @@ echo "\n4. Configuration Security\n";
 // Test insecure configurations
 try {
     // Test with SSL verification disabled (should warn)
-    $insecureConfig = \Netresearch\EuVatSdk\Client\ClientConfiguration::production()
+    $insecureConfig = ClientConfiguration::production()
         ->withSoapOptions([
             'stream_context' => stream_context_create([
                 'ssl' => [
@@ -191,7 +194,7 @@ try {
 }
 
 // Check default timeouts
-$defaultConfig = \Netresearch\EuVatSdk\Client\ClientConfiguration::production();
+$defaultConfig = ClientConfiguration::production();
 $reflection = new ReflectionObject($defaultConfig);
 $timeoutProp = $reflection->getProperty('timeout');
 $timeoutProp->setAccessible(true);
@@ -212,7 +215,7 @@ if (file_exists($wsdlPath)) {
 
     if ($wsdlContent !== false) {
         // Check for external entity references
-        if (strpos($wsdlContent, '<!ENTITY') !== false) {
+        if (str_contains($wsdlContent, '<!ENTITY')) {
             $securityIssues[] = "WSDL contains entity definitions (XXE risk)";
         } else {
             $passedChecks[] = "WSDL does not contain entity definitions";
@@ -226,7 +229,7 @@ if (file_exists($wsdlPath)) {
         }
 
         // Check endpoint security
-        if (strpos($wsdlContent, 'http://') !== false && strpos($wsdlContent, 'https://') === false) {
+        if (str_contains($wsdlContent, 'http://') && !str_contains($wsdlContent, 'https://')) {
             $securityIssues[] = "WSDL uses non-HTTPS endpoints";
         } else {
             $passedChecks[] = "WSDL uses HTTPS endpoints";
@@ -239,7 +242,7 @@ echo "\n6. Logging Security\n";
 
 // Create a test logger that captures output
 $logOutput = '';
-$testLogger = new class extends \Psr\Log\AbstractLogger {
+$testLogger = new class extends AbstractLogger {
     /** @var array<string> */
     private array $messages = [];
 
@@ -255,7 +258,7 @@ $testLogger = new class extends \Psr\Log\AbstractLogger {
 };
 
 // Test if sensitive data is logged
-$config = \Netresearch\EuVatSdk\Client\ClientConfiguration::production($testLogger)
+$config = ClientConfiguration::production($testLogger)
     ->withDebug(true);
 
 $testClient = VatRetrievalClientFactory::create($config);
@@ -284,7 +287,7 @@ foreach ($sensitivePatterns as $pattern) {
     }
 }
 
-if (empty($securityWarnings)) {
+if ($securityWarnings === []) {
     $passedChecks[] = "Logging does not expose sensitive data";
 }
 
@@ -305,7 +308,7 @@ foreach ($iterator as $file) {
         $content = file_get_contents($file->getPathname());
 
         if ($content !== false) {
-            if (strpos($content, 'declare(strict_types=1);') !== false) {
+            if (str_contains($content, 'declare(strict_types=1);')) {
                 $strictTypeFiles++;
             } else {
                 $securityWarnings[] = "File without strict types: " . $file->getFilename();
@@ -331,14 +334,14 @@ if (count($passedChecks) > 5) {
     echo "   ... and " . (count($passedChecks) - 5) . " more\n";
 }
 
-if (!empty($securityIssues)) {
+if ($securityIssues !== []) {
     echo "\n❌ Security Issues (" . count($securityIssues) . "):\n";
     foreach ($securityIssues as $issue) {
         echo "   - $issue\n";
     }
 }
 
-if (!empty($securityWarnings)) {
+if ($securityWarnings !== []) {
     echo "\n⚠️  Security Warnings (" . count($securityWarnings) . "):\n";
     foreach (array_slice($securityWarnings, 0, 5) as $warning) {
         echo "   - $warning\n";
@@ -359,5 +362,5 @@ echo "6. Consider implementing rate limiting\n";
 echo "7. Add security headers to API responses\n";
 
 // Exit code
-$hasIssues = !empty($securityIssues);
+$hasIssues = $securityIssues !== [];
 exit($hasIssues ? 1 : 0);

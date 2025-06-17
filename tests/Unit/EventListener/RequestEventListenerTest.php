@@ -30,11 +30,9 @@ class RequestEventListenerTest extends TestCase
             ->method('info')
             ->with(
                 'EU VAT SOAP Request initiated',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && $context['arguments_count'] === 2
-                        && isset($context['request_time']);
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && $context['arguments_count'] === 2
+                    && isset($context['request_time']))
             );
 
         $listener->logRequest('retrieveVatRates', $arguments, $startTime);
@@ -50,11 +48,9 @@ class RequestEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'EU VAT SOAP Request initiated with detailed payload',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && isset($context['arguments'])
-                        && isset($context['memory_usage']);
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && isset($context['arguments'])
+                    && isset($context['memory_usage']))
             );
 
         $listener->logRequest('retrieveVatRates', $arguments, $startTime);
@@ -71,9 +67,7 @@ class RequestEventListenerTest extends TestCase
             ->method('info')
             ->with(
                 'EU VAT SOAP Request initiated',
-                $this->callback(function ($logContext) {
-                    return $logContext['correlation_id'] === 'test_123';
-                })
+                $this->callback(fn($logContext): bool => $logContext['correlation_id'] === 'test_123')
             );
 
         $listener->logRequest('retrieveVatRates', $arguments, $startTime, $context);
@@ -89,10 +83,8 @@ class RequestEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'SOAP request preparation timing',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && $context['preparation_time_ms'] < 100;
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && $context['preparation_time_ms'] < 100)
             );
 
         $listener->logRequestTiming('retrieveVatRates', $startTime, $preparedTime);
@@ -108,9 +100,7 @@ class RequestEventListenerTest extends TestCase
             ->method('warning')
             ->with(
                 'Slow SOAP request preparation detected',
-                $this->callback(function ($context) {
-                    return $context['preparation_time_ms'] > 100;
-                })
+                $this->callback(fn($context): bool => $context['preparation_time_ms'] > 100)
             );
 
         $listener->logRequestTiming('retrieveVatRates', $startTime, $preparedTime);
@@ -156,9 +146,7 @@ class RequestEventListenerTest extends TestCase
             ->method('info')
             ->with(
                 'EU VAT SOAP Request initiated',
-                $this->callback(function ($context) {
-                    return $context['arguments_count'] === 0;
-                })
+                $this->callback(fn($context): bool => $context['arguments_count'] === 0)
             );
 
         $listener->logRequest('test', [], $startTime);
@@ -187,10 +175,9 @@ class RequestEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'EU VAT SOAP Request initiated with detailed payload',
-                $this->callback(function ($context) {
+                $this->callback(fn($context): bool =>
                     // Verify that arguments are sanitized/limited
-                    return isset($context['arguments']['large_data']['[TRUNCATED]']);
-                })
+                    isset($context['arguments']['large_data']['[TRUNCATED]']))
             );
 
         $listener->logRequest('test', $arguments, $startTime);

@@ -83,7 +83,7 @@ class NullTelemetryTest extends TestCase
 
             $this->assertTrue(true); // Test passed if no exceptions
         } catch (\Exception $e) {
-            $telemetry->recordError('retrieveVatRates', get_class($e), [
+            $telemetry->recordError('retrieveVatRates', $e::class, [
                 'error_message' => $e->getMessage(),
             ]);
 

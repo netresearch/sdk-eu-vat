@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Assert;
+use Brick\Math\BigDecimal;
+use PHPStan\Rules\Rule;
+
 /**
  * PHPUnit bootstrap file for EU VAT SDK tests
  *
@@ -15,7 +19,6 @@ declare(strict_types=1);
 
 // Ensure autoloader is available
 $autoloader = require __DIR__ . '/../vendor/autoload.php';
-
 // Set timezone to avoid warnings
 date_default_timezone_set('UTC');
 
@@ -70,7 +73,7 @@ if (!function_exists('assertValidEuCountryCode')) {
             'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
         ];
 
-        PHPUnit\Framework\Assert::assertContains(
+        Assert::assertContains(
             $countryCode,
             $validCodes,
             "'{$countryCode}' is not a valid EU member state code"
@@ -84,20 +87,20 @@ if (!function_exists('assertValidVatRate')) {
      */
     function assertValidVatRate(string $rate): void
     {
-        PHPUnit\Framework\Assert::assertMatchesRegularExpression(
+        Assert::assertMatchesRegularExpression(
             '/^\d+\.\d+$/',
             $rate,
             "'{$rate}' is not a valid VAT rate format"
         );
 
-        $rateDecimal = \Brick\Math\BigDecimal::of($rate);
+        $rateDecimal = BigDecimal::of($rate);
 
-        PHPUnit\Framework\Assert::assertTrue(
+        Assert::assertTrue(
             $rateDecimal->isGreaterThanOrEqualTo('0'),
             "VAT rate cannot be negative"
         );
 
-        PHPUnit\Framework\Assert::assertTrue(
+        Assert::assertTrue(
             $rateDecimal->isLessThanOrEqualTo('50.0'),
             "VAT rate seems unreasonably high"
         );
@@ -105,7 +108,7 @@ if (!function_exists('assertValidVatRate')) {
 }
 
 // Register custom PHPStan rules if available
-if (class_exists('PHPStan\Rules\Rule')) {
+if (class_exists(Rule::class)) {
     // Custom rules would be registered here
 }
 

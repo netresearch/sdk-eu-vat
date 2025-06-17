@@ -31,17 +31,15 @@ VCR::configure()
 
     // Set up whitelist for allowed requests
     ->setWhiteList([
-        'allow' => [
-            'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService',
-            'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC',
-            'https://ec.europa.eu/taxation_customs/tedb/ws-test/VatRetrievalService',
-        ],
+        'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService',
+        'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC',
+        'https://ec.europa.eu/taxation_customs/tedb/ws-test/VatRetrievalService',
     ])
 
     // Configure SOAP-specific settings
     ->addRequestMatcher(
         'soap_action',
-        function ($request1, $request2) {
+        function ($request1, $request2): bool {
             // Match SOAP action headers
             $action1 = $request1->getHeader('SOAPAction')[0] ?? '';
             $action2 = $request2->getHeader('SOAPAction')[0] ?? '';

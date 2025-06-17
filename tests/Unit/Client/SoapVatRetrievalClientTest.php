@@ -96,7 +96,9 @@ class SoapVatRetrievalClientTest extends TestCase
         $client = new SoapVatRetrievalClient($this->config, $mockEngine);
 
         $this->expectException(ServiceUnavailableException::class);
-        $this->expectExceptionMessage('Network error occurred while connecting to EU VAT service: Internal ext-soap error: Network timeout');
+        $this->expectExceptionMessage(
+            'Network error occurred while connecting to EU VAT service: Internal ext-soap error: Network timeout'
+        );
 
         $client->retrieveVatRates($request);
     }

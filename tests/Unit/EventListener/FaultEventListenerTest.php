@@ -32,10 +32,11 @@ class FaultEventListenerTest extends TestCase
 
         $this->logger->expects($this->once())
             ->method('error')
-            ->with('SOAP Fault received from EU VAT service', $this->callback(function ($context) {
-                return $context['fault_code'] === 'TEDB-100'
-                    && $context['fault_string'] === 'Invalid date format';
-            }));
+            ->with(
+                'SOAP Fault received from EU VAT service',
+                $this->callback(fn($context): bool => $context['fault_code'] === 'TEDB-100'
+                    && $context['fault_string'] === 'Invalid date format')
+            );
 
         $this->expectException(InvalidRequestException::class);
         $this->expectExceptionMessage('Invalid date format provided (TEDB-100): Invalid date format');
@@ -114,9 +115,12 @@ class FaultEventListenerTest extends TestCase
 
         $this->logger->expects($this->once())
             ->method('error')
-            ->with('SOAP Fault received from EU VAT service', $this->callback(function ($context) {
-                return $context['fault_detail'] === 'Additional error information';
-            }));
+            ->with(
+                'SOAP Fault received from EU VAT service',
+                $this->callback(
+                    fn($context): bool => $context['fault_detail'] === 'Additional error information'
+                )
+            );
 
         $this->expectException(InvalidRequestException::class);
 

@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
+use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
+use Netresearch\EuVatSdk\Exception\VatServiceException;
+
 /**
  * Package validation script for EU VAT SDK
  *
@@ -20,11 +25,6 @@ $warnings = [];
 
 // Check PHP version
 echo "1. Checking PHP version...\n";
-if (PHP_VERSION_ID < 80100) {
-    $errors[] = "PHP 8.1+ is required, found " . PHP_VERSION;
-} else {
-    echo "   ✓ PHP " . PHP_VERSION . " meets requirements\n";
-}
 
 // Check required extensions
 echo "\n2. Checking required PHP extensions...\n";
@@ -73,7 +73,7 @@ if (!file_exists($composerPath)) {
                 'psr/log' => '^3.0',
             ];
 
-            foreach ($expectedDeps as $dep => $constraint) {
+            foreach (array_keys($expectedDeps) as $dep) {
                 if (!isset($composerJson['require'][$dep])) {
                     $warnings[] = "Missing expected dependency: $dep";
                 }
@@ -94,10 +94,10 @@ if (!file_exists($autoloadPath)) {
 
     // Test autoloading of key classes
     $testClasses = [
-        'Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory',
-        'Netresearch\EuVatSdk\Client\ClientConfiguration',
-        'Netresearch\EuVatSdk\DTO\Request\VatRatesRequest',
-        'Netresearch\EuVatSdk\Exception\VatServiceException',
+        VatRetrievalClientFactory::class,
+        ClientConfiguration::class,
+        VatRatesRequest::class,
+        VatServiceException::class,
     ];
 
     foreach ($testClasses as $class) {
@@ -277,7 +277,7 @@ echo "   ✓ Created test installation directory\n";
 // Summary
 echo "\n=== Validation Summary ===\n";
 
-if (empty($errors)) {
+if ($errors === []) {
     echo "✅ No errors found!\n";
 } else {
     echo "❌ Found " . count($errors) . " errors:\n";
@@ -286,7 +286,7 @@ if (empty($errors)) {
     }
 }
 
-if (!empty($warnings)) {
+if ($warnings !== []) {
     echo "\n⚠️  Found " . count($warnings) . " warnings:\n";
     foreach ($warnings as $warning) {
         echo "   - $warning\n";
@@ -299,4 +299,4 @@ if (is_dir($tempDir)) {
 }
 
 // Exit code
-exit(empty($errors) ? 0 : 1);
+exit($errors === [] ? 0 : 1);

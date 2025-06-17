@@ -48,13 +48,11 @@ class LoggingMiddlewareTest extends TestCase
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0), // duration
-                $this->callback(function ($context) {
-                    return $context['endpoint'] === 'EU_VAT_Service'
-                        && $context['result_type'] === 'array';
-                })
+                $this->callback(fn($context): bool => $context['endpoint'] === 'EU_VAT_Service'
+                    && $context['result_type'] === 'array')
             );
 
-        $next = function ($method, $args) use ($expectedResult) {
+        $next = function ($method, $args) use ($expectedResult): array {
             $this->assertEquals('retrieveVatRates', $method);
             $this->assertEquals(['memberStates' => ['DE', 'FR']], $args);
             return $expectedResult;
@@ -80,11 +78,9 @@ class LoggingMiddlewareTest extends TestCase
             ->method('error')
             ->with(
                 'EU VAT SOAP Operation failed',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && $context['exception_class'] === InvalidRequestException::class
-                        && $context['exception_message'] === 'Invalid country code';
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && $context['exception_class'] === InvalidRequestException::class
+                    && $context['exception_message'] === 'Invalid country code')
             );
 
         // Expect error telemetry
@@ -93,10 +89,8 @@ class LoggingMiddlewareTest extends TestCase
             ->with(
                 'retrieveVatRates',
                 InvalidRequestException::class,
-                $this->callback(function ($context) {
-                    return $context['endpoint'] === 'EU_VAT_Service'
-                        && $context['error_message'] === 'Invalid country code';
-                })
+                $this->callback(fn($context): bool => $context['endpoint'] === 'EU_VAT_Service'
+                    && $context['error_message'] === 'Invalid country code')
             );
 
         $next = function ($method, $args) use ($exception): void {
@@ -128,7 +122,7 @@ class LoggingMiddlewareTest extends TestCase
         $this->telemetry->expects($this->once())
             ->method('recordRequest');
 
-        $next = function ($method, $args) use ($result) {
+        $next = function ($method, $args) use ($result): array {
             // Simulate slow operation
             usleep(10000); // 10ms delay (not actually slow but will be > 0)
             return $result;
@@ -152,16 +146,12 @@ class LoggingMiddlewareTest extends TestCase
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0),
-                $this->callback(function ($context) {
-                    return isset($context['member_states'])
-                        && $context['member_states'] === ['DE', 'FR', 'IT']
-                        && $context['country_count'] === 3;
-                })
+                $this->callback(fn($context): bool => isset($context['member_states'])
+                    && $context['member_states'] === ['DE', 'FR', 'IT']
+                    && $context['country_count'] === 3)
             );
 
-        $next = function ($method, $args) use ($result) {
-            return $result;
-        };
+        $next = fn($method, $args): array => $result;
 
         $this->middleware->process('retrieveVatRates', $arguments, $next);
     }
@@ -176,15 +166,11 @@ class LoggingMiddlewareTest extends TestCase
             ->with(
                 'retrieveVatRates',
                 $this->greaterThan(0),
-                $this->callback(function ($context) {
-                    return $context['member_states'] === ['DE']
-                        && $context['country_count'] === 1;
-                })
+                $this->callback(fn($context): bool => $context['member_states'] === ['DE']
+                    && $context['country_count'] === 1)
             );
 
-        $next = function ($method, $args) use ($result) {
-            return $result;
-        };
+        $next = fn($method, $args): array => $result;
 
         $this->middleware->process('retrieveVatRates', $arguments, $next);
     }
@@ -195,7 +181,10 @@ class LoggingMiddlewareTest extends TestCase
 
         // Create anonymous class with getResults method
         $mockResponse = new class {
-            public function getResults()
+            /**
+             * @return array<string>
+             */
+            public function getResults(): array
             {
                 return ['item1', 'item2'];
             }
@@ -211,9 +200,7 @@ class LoggingMiddlewareTest extends TestCase
                 $this->isType('array')
             );
 
-        $next = function ($method, $args) use ($mockResponse) {
-            return $mockResponse;
-        };
+        $next = fn($method, $args): object => $mockResponse;
 
         $result = $this->middleware->process('retrieveVatRates', $arguments, $next);
         $this->assertSame($mockResponse, $result);
@@ -265,9 +252,7 @@ class LoggingMiddlewareTest extends TestCase
                 $this->isType('array')
             );
 
-        $next = function ($method, $args) use ($result) {
-            return $result;
-        };
+        $next = fn($method, $args): string => $result;
 
         $actualResult = $this->middleware->process('testMethod', $arguments, $next);
         $this->assertEquals($result, $actualResult);

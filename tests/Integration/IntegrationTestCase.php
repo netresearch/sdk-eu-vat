@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Integration;
 
+use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
 use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use VCR\VCR;
 
 /**
@@ -28,10 +29,6 @@ abstract class IntegrationTestCase extends TestCase
      */
     protected VatRetrievalClientInterface $client;
 
-    /**
-     * Logger instance for debugging
-     */
-    protected LoggerInterface $logger;
 
     /**
      * Current VCR cassette name
@@ -48,64 +45,8 @@ abstract class IntegrationTestCase extends TestCase
         // Load VCR configuration
         require_once __DIR__ . '/../fixtures/vcr-config.php';
 
-        // Turn on VCR
+        // Turn on VCR for this test
         VCR::turnOn();
-
-        // Create a test logger that outputs to stderr for debugging
-        $this->logger = new class implements LoggerInterface {
-            public function emergency(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('EMERGENCY', $message, $context);
-            }
-
-            public function alert(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('ALERT', $message, $context);
-            }
-
-            public function critical(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('CRITICAL', $message, $context);
-            }
-
-            public function error(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('ERROR', $message, $context);
-            }
-
-            public function warning(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('WARNING', $message, $context);
-            }
-
-            public function notice(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('NOTICE', $message, $context);
-            }
-
-            public function info(\Stringable|string $message, array $context = []): void
-            {
-                $this->log('INFO', $message, $context);
-            }
-
-            public function debug(\Stringable|string $message, array $context = []): void
-            {
-                if (getenv('DEBUG_TESTS')) {
-                    $this->log('DEBUG', $message, $context);
-                }
-            }
-
-            public function log($level, \Stringable|string $message, array $context = []): void
-            {
-                fwrite(STDERR, sprintf(
-                    "[%s] %s: %s %s\n",
-                    date('Y-m-d H:i:s'),
-                    $level,
-                    $message,
-                    $context ? json_encode($context) : ''
-                ));
-            }
-        };
 
         // Initialize the client
         $this->initializeClient();
@@ -116,11 +57,13 @@ abstract class IntegrationTestCase extends TestCase
      */
     protected function tearDown(): void
     {
+        // Always eject any active cassette if we have one
         if ($this->cassetteName !== null) {
             VCR::eject();
             $this->cassetteName = null;
         }
 
+        // Turn off VCR for this test
         VCR::turnOff();
 
         parent::tearDown();
@@ -133,13 +76,19 @@ abstract class IntegrationTestCase extends TestCase
      */
     protected function initializeClient(): void
     {
-        // Use test endpoint by default for integration tests
-        $useTestEndpoint = getenv('USE_PRODUCTION_ENDPOINT') !== 'true';
+        // Use sandbox endpoint by default for integration tests
+        $useProductionEndpoint = getenv('USE_PRODUCTION_ENDPOINT') === 'true';
 
-        $this->client = VatRetrievalClientFactory::createForTesting(
-            $this->logger,
-            $useTestEndpoint
-        );
+        if ($useProductionEndpoint) {
+            // Create sandbox client but with production endpoint for testing
+            $config = ClientConfiguration::test(null)
+                ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
+                ->withTimeout(15)
+                ->withDebug(true);
+            $this->client = new SoapVatRetrievalClient($config);
+        } else {
+            $this->client = VatRetrievalClientFactory::createSandbox();
+        }
     }
 
     /**
@@ -152,15 +101,7 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->cassetteName = $cassetteName;
 
-        // Default options
-        $defaultOptions = [
-            'record' => 'new_episodes', // Record new requests, replay existing ones
-            'match_requests_on' => ['method', 'url', 'body'],
-        ];
-
-        $options = array_merge($defaultOptions, $options);
-
-        VCR::insertCassette($cassetteName, $options);
+        VCR::insertCassette($cassetteName);
     }
 
     /**
@@ -178,10 +119,12 @@ abstract class IntegrationTestCase extends TestCase
     /**
      * Sets up a VCR cassette, respecting the REFRESH_CASSETTES environment variable
      *
-     * @param string $cassetteName Name of the cassette file
+     * @param string|null $cassetteName Name of the cassette file (null for auto-generated)
      */
-    protected function setupVcr(string $cassetteName): void
+    protected function setupVcr(?string $cassetteName = null): void
     {
+        $cassetteName ??= $this->getDefaultCassetteName();
+
         if ($this->shouldRefreshCassettes()) {
             $this->recordCassette($cassetteName);
         } else {
@@ -202,15 +145,18 @@ abstract class IntegrationTestCase extends TestCase
     /**
      * Get a client configured for a specific environment
      *
-     * @param string $environment Environment name (production, test, etc.)
+     * @param string $environment Environment name (production or sandbox)
      * @return VatRetrievalClientInterface Configured client
      */
     protected function getClientForEnvironment(string $environment): VatRetrievalClientInterface
     {
-        return VatRetrievalClientFactory::createForEnvironment(
-            $environment,
-            $this->logger
-        );
+        return match (strtolower($environment)) {
+            'production' => VatRetrievalClientFactory::create(),
+            'sandbox', 'test' => VatRetrievalClientFactory::createSandbox(),
+            default => throw new \InvalidArgumentException(
+                "Unsupported environment: {$environment}. Use 'production' or 'sandbox'."
+            )
+        };
     }
 
     /**
@@ -245,5 +191,19 @@ abstract class IntegrationTestCase extends TestCase
             $actualPrecision,
             $message ?: "Expected precision of $expectedPrecision, got $actualPrecision for value '$value'"
         );
+    }
+
+    /**
+     * Generate a unique cassette name based on test class and method
+     *
+     * @return string Unique cassette name for the current test
+     */
+    protected function getDefaultCassetteName(): string
+    {
+        // Simple fallback - use class name and timestamp
+        $className = (new \ReflectionClass($this))->getShortName();
+        $className = str_replace('Test', '', $className);
+
+        return strtolower($className) . '/default_test_' . time();
     }
 }

@@ -31,11 +31,9 @@ class ResponseEventListenerTest extends TestCase
             ->method('info')
             ->with(
                 'EU VAT SOAP Response received',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && $context['duration_ms'] > 1000
-                        && $context['response_type'] === 'array';
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && $context['duration_ms'] > 1000
+                    && $context['response_type'] === 'array')
             );
 
         $listener->logResponse('retrieveVatRates', $response, $startTime, $endTime);
@@ -52,11 +50,9 @@ class ResponseEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'EU VAT SOAP Response received with analysis',
-                $this->callback(function ($context) {
-                    return isset($context['response_size_bytes'])
-                        && isset($context['response_structure'])
-                        && isset($context['memory_usage_after']);
-                })
+                $this->callback(fn($context): bool => isset($context['response_size_bytes'])
+                    && isset($context['response_structure'])
+                    && isset($context['memory_usage_after']))
             );
 
         $listener->logResponse('retrieveVatRates', $response, $startTime, $endTime);
@@ -73,9 +69,7 @@ class ResponseEventListenerTest extends TestCase
             ->method('warning')
             ->with(
                 'Slow EU VAT SOAP Response detected',
-                $this->callback(function ($context) {
-                    return $context['duration_ms'] > 5000;
-                })
+                $this->callback(fn($context): bool => $context['duration_ms'] > 5000)
             );
 
         $listener->logResponse('retrieveVatRates', $response, $startTime, $endTime);
@@ -93,10 +87,8 @@ class ResponseEventListenerTest extends TestCase
             ->method('info')
             ->with(
                 'EU VAT SOAP Response received',
-                $this->callback(function ($logContext) {
-                    return $logContext['correlation_id'] === 'test_123'
-                        && $logContext['response_type'] === 'null';
-                })
+                $this->callback(fn($logContext): bool => $logContext['correlation_id'] === 'test_123'
+                    && $logContext['response_type'] === 'null')
             );
 
         $listener->logResponse('retrieveVatRates', $response, $startTime, $endTime, $context);
@@ -108,7 +100,10 @@ class ResponseEventListenerTest extends TestCase
 
         // Create anonymous class with getResults method
         $mockResponse = new class {
-            public function getResults()
+            /**
+             * @return array<string>
+             */
+            public function getResults(): array
             {
                 return ['result1', 'result2'];
             }
@@ -121,10 +116,8 @@ class ResponseEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'EU VAT SOAP Response received with analysis',
-                $this->callback(function ($context) {
-                    return isset($context['response_structure']['result_count'])
-                        && $context['response_structure']['result_count'] === 2;
-                })
+                $this->callback(fn($context): bool => isset($context['response_structure']['result_count'])
+                    && $context['response_structure']['result_count'] === 2)
             );
 
         $listener->logResponse('retrieveVatRates', $mockResponse, $startTime, $endTime);
@@ -139,11 +132,9 @@ class ResponseEventListenerTest extends TestCase
             ->method('error')
             ->with(
                 'EU VAT SOAP Response contains error',
-                $this->callback(function ($context) {
-                    return $context['method'] === 'retrieveVatRates'
-                        && $context['error_type'] === 'validation_error'
-                        && $context['duration_ms'] === 1500.0;
-                })
+                $this->callback(fn($context): bool => $context['method'] === 'retrieveVatRates'
+                    && $context['error_type'] === 'validation_error'
+                    && $context['duration_ms'] === 1500.0)
             );
 
         $listener->logResponseError('retrieveVatRates', $response, 'validation_error', 1500.0);
@@ -158,10 +149,8 @@ class ResponseEventListenerTest extends TestCase
             ->method('error')
             ->with(
                 'EU VAT SOAP Response contains error',
-                $this->callback(function ($context) {
-                    return isset($context['error_response'])
-                        && $context['error_response']['error'] === 'test error';
-                })
+                $this->callback(fn($context): bool => isset($context['error_response'])
+                    && $context['error_response']['error'] === 'test error')
             );
 
         $listener->logResponseError('retrieveVatRates', $response, 'test_error', 1000.0);
@@ -175,7 +164,7 @@ class ResponseEventListenerTest extends TestCase
             ->method('debug')
             ->with(
                 'EU VAT response performance metrics',
-                $this->callback(function ($context) {
+                $this->callback(function (array $context): bool {
                     return $context['duration_ms'] === 2000.0
                         && $context['response_size_bytes'] === 1024
                         && $context['throughput_bytes_per_ms'] === 0.51; // 1024/2000 rounded
@@ -193,7 +182,7 @@ class ResponseEventListenerTest extends TestCase
             ->method('notice')
             ->with(
                 'Slow EU VAT response detected',
-                $this->callback(function ($context) {
+                $this->callback(function (array $context): bool {
                     return $context['duration_ms'] === 7000.0; // Slow but not very slow
                 })
             );
@@ -209,7 +198,7 @@ class ResponseEventListenerTest extends TestCase
             ->method('warning')
             ->with(
                 'Very slow EU VAT response detected',
-                $this->callback(function ($context) {
+                $this->callback(function (array $context): bool {
                     return $context['duration_ms'] === 15000.0; // Very slow
                 })
             );
@@ -240,10 +229,9 @@ class ResponseEventListenerTest extends TestCase
             ->method('error')
             ->with(
                 'EU VAT SOAP Response contains error',
-                $this->callback(function ($context) {
+                $this->callback(fn($context): bool =>
                     // Should be truncated due to size
-                    return isset($context['error_response']['[TRUNCATED]']);
-                })
+                    isset($context['error_response']['[TRUNCATED]']))
             );
 
         $listener->logResponseError('retrieveVatRates', $largeResponse, 'large_error', 1000.0);
