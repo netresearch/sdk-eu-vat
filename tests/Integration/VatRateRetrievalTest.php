@@ -29,6 +29,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
      */
     public function testRetrieveSingleCountryVatRates(): void
     {
+        // Use descriptive cassette name or fall back to auto-generated name
         $this->setupVcr('vat-rates-single-country-de');
 
         // Request VAT rates for Germany on a specific date
@@ -49,10 +50,10 @@ class VatRateRetrievalTest extends IntegrationTestCase
         $this->assertEquals('DE', $germanResult->getMemberState());
 
         // Verify VAT rate details
-        $vatRate = $germanResult->getVatRate();
+        $vatRate = $germanResult->getRate();
         $this->assertInstanceOf(VatRate::class, $vatRate);
         $this->assertEquals('STANDARD', $vatRate->getType());
-        $this->assertEquals('19.0', $vatRate->getValue()->__toString());
+        $this->assertEquals('19.0', $vatRate->getValue());
 
         // Verify date handling
         $this->assertValidEuDateFormat($germanResult->getSituationOn()->format('Y-m-d'));
@@ -99,15 +100,15 @@ class VatRateRetrievalTest extends IntegrationTestCase
         $this->assertArrayHasKey('NL', $resultsByCountry);
 
         // Verify some known VAT rates (as of 2024)
-        $this->assertEquals('19.0', $resultsByCountry['DE']->getVatRate()->getValue()->__toString());
-        $this->assertEquals('20.0', $resultsByCountry['FR']->getVatRate()->getValue()->__toString());
-        $this->assertEquals('22.0', $resultsByCountry['IT']->getVatRate()->getValue()->__toString());
-        $this->assertEquals('21.0', $resultsByCountry['ES']->getVatRate()->getValue()->__toString());
-        $this->assertEquals('21.0', $resultsByCountry['NL']->getVatRate()->getValue()->__toString());
+        $this->assertEquals('19.0', $resultsByCountry['DE']->getRate()->getValue());
+        $this->assertEquals('20.0', $resultsByCountry['FR']->getRate()->getValue());
+        $this->assertEquals('22.0', $resultsByCountry['IT']->getRate()->getValue());
+        $this->assertEquals('21.0', $resultsByCountry['ES']->getRate()->getValue());
+        $this->assertEquals('21.0', $resultsByCountry['NL']->getRate()->getValue());
 
         // All should be STANDARD rates
         foreach ($resultsByCountry as $result) {
-            $this->assertEquals('STANDARD', $result->getVatRate()->getType());
+            $this->assertEquals('STANDARD', $result->getRate()->getType());
         }
     }
 
@@ -144,7 +145,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         // Verify UK VAT rate from 2020
         $this->assertArrayHasKey('GB', $resultsByCountry);
-        $this->assertEquals('20.0', $resultsByCountry['GB']->getVatRate()->getValue()->__toString());
+        $this->assertEquals('20.0', $resultsByCountry['GB']->getRate()->getValue());
     }
 
     /**
@@ -181,7 +182,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         // Verify all countries are present
         $returnedCountries = array_map(
-            fn($result) => $result->getMemberState(),
+            fn($result): string => $result->getMemberState(),
             $response->getResults()
         );
 
@@ -192,10 +193,10 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         // All should have valid VAT rates
         foreach ($response->getResults() as $result) {
-            $vatRate = $result->getVatRate();
+            $vatRate = $result->getRate();
             $this->assertNotNull($vatRate);
-            $this->assertGreaterThan(0, $vatRate->getValue()->toFloat());
-            $this->assertLessThanOrEqual(27, $vatRate->getValue()->toFloat()); // Hungary has 27%
+            $this->assertGreaterThan(0, $vatRate->getDecimalValue()->toFloat());
+            $this->assertLessThanOrEqual(27, $vatRate->getDecimalValue()->toFloat()); // Hungary has 27%
         }
     }
 
@@ -223,7 +224,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
         $response = $this->client->retrieveVatRates($request);
 
         foreach ($response->getResults() as $result) {
-            $vatRateString = $result->getVatRate()->getValue()->__toString();
+            $vatRateString = $result->getRate()->getRawValue();
 
             // VAT rates should maintain proper decimal precision
             $this->assertMatchesRegularExpression(
@@ -233,7 +234,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
             );
 
             // Check that trailing zeros are preserved (e.g., "17.0" not "17")
-            if (strpos($vatRateString, '.0') !== false) {
+            if (str_contains($vatRateString, '.0')) {
                 $this->assertStringEndsWith('.0', $vatRateString);
             }
         }

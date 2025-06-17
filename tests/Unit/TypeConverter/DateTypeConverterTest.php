@@ -109,7 +109,7 @@ class DateTypeConverterTest extends TestCase
     public function testConvertPhpToXmlWithInteger(): void
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage('Cannot convert integer to XML date');
+        $this->expectExceptionMessage('Cannot convert int to XML date');
 
         $this->converter->convertPhpToXml(123);
     }
