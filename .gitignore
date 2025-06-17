@@ -46,3 +46,6 @@ tests/fixtures/cassettes/*.yml
 *.tmp
 *.temp
 .cache/
+
+# Rector cache
+var/rector/
