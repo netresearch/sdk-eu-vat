@@ -47,7 +47,7 @@ final class FaultEventListener
     /**
      * Create fault event listener with logger
      *
-     * @param LoggerInterface $logger PSR-3 logger for fault recording
+     * @param LoggerInterface $logger PSR-3 logger for fault recording.
      */
     public function __construct(LoggerInterface $logger)
     {
@@ -61,10 +61,10 @@ final class FaultEventListener
      * exception with enhanced error context. The original fault is preserved
      * as the previous exception for full stack trace information.
      *
-     * @param SoapFault $fault Original SOAP fault from service
-     * @throws InvalidRequestException For client-side validation errors (TEDB-100, 101, 102)
-     * @throws ServiceUnavailableException For server-side errors (TEDB-400)
-     * @throws SoapFaultException For unhandled SOAP faults
+     * @param SoapFault $fault Original SOAP fault from service.
+     * @throws InvalidRequestException For client-side validation errors (TEDB-100, 101, 102).
+     * @throws ServiceUnavailableException For server-side errors (TEDB-400).
+     * @throws SoapFaultException For unhandled SOAP faults.
      *
      * @example Fault handling in client:
      * ```php
@@ -74,6 +74,7 @@ final class FaultEventListener
      *     $this->faultListener->handleSoapFault($fault);
      * }
      * ```
+     *
      */
     public function handleSoapFault(SoapFault $fault): void
     {
@@ -130,8 +131,8 @@ final class FaultEventListener
     /**
      * Check if a fault code represents a client-side validation error
      *
-     * @param string $faultCode Fault code to check
-     * @return boolean True if this is a client validation error
+     * @param string $faultCode Fault code to check.
+     * @return boolean True if this is a client validation error.
      *
      * @example Usage in error categorization:
      * ```php
@@ -150,8 +151,8 @@ final class FaultEventListener
     /**
      * Check if a fault code represents a server-side error
      *
-     * @param string $faultCode Fault code to check
-     * @return boolean True if this is a server-side error
+     * @param string $faultCode Fault code to check.
+     * @return boolean True if this is a server-side error.
      */
     public function isServerError(string $faultCode): bool
     {
@@ -164,8 +165,8 @@ final class FaultEventListener
      * The SOAP fault detail can contain structured XML with additional
      * error information. This method attempts to extract useful details.
      *
-     * @param mixed $faultDetail Raw fault detail from SoapFault
-     * @return array<string, mixed> Extracted error details
+     * @param mixed $faultDetail Raw fault detail from SoapFault.
+     * @return array<string, mixed> Extracted error details.
      */
     public function extractErrorDetails(mixed $faultDetail): array
     {

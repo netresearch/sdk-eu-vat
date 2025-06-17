@@ -42,8 +42,8 @@ final class RequestEventListener
     /**
      * Create request event listener
      *
-     * @param LoggerInterface $logger PSR-3 logger implementation
-     * @param boolean         $debug  Enable debug mode for verbose logging
+     * @param LoggerInterface $logger PSR-3 logger implementation.
+     * @param boolean         $debug  Enable debug mode for verbose logging.
      */
     public function __construct(LoggerInterface $logger, bool $debug = false)
     {
@@ -57,10 +57,10 @@ final class RequestEventListener
      * Records request details at appropriate log levels based on debug mode.
      * In debug mode, includes full request arguments for troubleshooting.
      *
-     * @param string               $method    SOAP method being called (e.g., 'retrieveVatRates')
-     * @param array<string, mixed> $arguments Request arguments
-     * @param float                $startTime Request start time from microtime(true)
-     * @param array<string, mixed> $context   Additional context information
+     * @param string               $method    SOAP method being called (e.g., 'retrieveVatRates').
+     * @param array<string, mixed> $arguments Request arguments.
+     * @param float                $startTime Request start time from microtime(true).
+     * @param array<string, mixed> $context   Additional context information.
      *
      * @example Logging a VAT rates request:
      * ```php
@@ -70,6 +70,7 @@ final class RequestEventListener
      *     'situationOn' => '2024-01-15'
      * ], $startTime, ['correlation_id' => 'req_123']);
      * ```
+     *
      */
     public function logRequest(
         string $method,
@@ -103,10 +104,11 @@ final class RequestEventListener
      * Records the time taken to prepare and send a request, useful for
      * performance monitoring and identifying slow request preparation.
      *
-     * @param string               $method       SOAP method name
-     * @param float                $startTime    Request start time from microtime(true)
-     * @param float                $preparedTime Time when request was prepared
-     * @param array<string, mixed> $context      Additional context
+     * @param string               $method       SOAP method name.
+     * @param float                $startTime    Request start time from microtime(true).
+     * @param float                $preparedTime Time when request was prepared.
+     * @param array<string, mixed> $context      Additional context.
+     *
      */
     public function logRequestTiming(
         string $method,
@@ -136,8 +138,8 @@ final class RequestEventListener
      * before logging. Currently focused on EU VAT service which doesn't
      * contain sensitive data, but provides structure for future enhancement.
      *
-     * @param array<string, mixed> $arguments Raw request arguments
-     * @return array<string, mixed> Sanitized arguments safe for logging
+     * @param array<string, mixed> $arguments Raw request arguments.
+     * @return array<string, mixed> Sanitized arguments safe for logging.
      */
     private function sanitizeArguments(array $arguments): array
     {
@@ -152,10 +154,10 @@ final class RequestEventListener
      * Prevents log explosion from deeply nested or very large arrays
      * by truncating at specified depth and size limits.
      *
-     * @param mixed   $data        Data to limit
-     * @param integer $maxDepth    Maximum nesting depth
-     * @param integer $maxElements Maximum elements per array
-     * @return mixed Limited data structure
+     * @param mixed   $data        Data to limit.
+     * @param integer $maxDepth    Maximum nesting depth.
+     * @param integer $maxElements Maximum elements per array.
+     * @return mixed Limited data structure.
      */
     private function limitArrayDepth(mixed $data, int $maxDepth, int $maxElements): mixed
     {
@@ -192,7 +194,7 @@ final class RequestEventListener
      * Creates a unique identifier for correlating requests across logs
      * and systems. Useful for distributed tracing and debugging.
      *
-     * @return string Unique correlation identifier
+     * @return string Unique correlation identifier.
      *
      * @example Usage in request logging:
      * ```php
@@ -215,7 +217,8 @@ final class RequestEventListener
      * This method is called by the event dispatcher when a SOAP request is made.
      * It extracts request information and logs it appropriately based on debug mode.
      *
-     * @param object $event The request event object
+     * @param object $event The request event object.
+     *
      */
     public function handleRequestEvent(object $event): void
     {
@@ -232,7 +235,7 @@ final class RequestEventListener
     /**
      * Check if debug logging is enabled
      *
-     * @return boolean True if debug mode is active
+     * @return boolean True if debug mode is active.
      */
     public function isDebugEnabled(): bool
     {

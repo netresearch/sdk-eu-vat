@@ -221,7 +221,7 @@ class EndToEndTest extends IntegrationTestCase
         $response = $client->retrieveVatRates($request);
 
         foreach ($response->getResults() as $result) {
-            $vatRate = $result->getVatRate();
+            $vatRate = $result->getRate();
 
             // Test precise decimal handling
             $decimalValue = $vatRate->getDecimalValue();

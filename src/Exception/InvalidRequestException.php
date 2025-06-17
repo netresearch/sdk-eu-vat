@@ -50,9 +50,9 @@ use Throwable;
 class InvalidRequestException extends VatServiceException
 {
     /**
-     * @param string         $message   Error message
-     * @param string|null    $errorCode Optional error code (e.g., 'TEDB-100', 'TEDB-101')
-     * @param Throwable|null $previous  Previous exception if any
+     * @param string         $message   Error message.
+     * @param string|null    $errorCode Optional error code (e.g., 'TEDB-100', 'TEDB-101').
+     * @param Throwable|null $previous  Previous exception if any.
      */
     public function __construct(
         string $message = "",

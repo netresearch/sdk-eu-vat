@@ -42,8 +42,8 @@ final class ResponseEventListener
     /**
      * Create response event listener
      *
-     * @param LoggerInterface $logger PSR-3 logger implementation
-     * @param boolean         $debug  Enable debug mode for detailed logging
+     * @param LoggerInterface $logger PSR-3 logger implementation.
+     * @param boolean         $debug  Enable debug mode for detailed logging.
      */
     public function __construct(LoggerInterface $logger, bool $debug = false)
     {
@@ -58,11 +58,11 @@ final class ResponseEventListener
      * includes detailed response analysis. In production mode, focuses
      * on essential metrics and timing information.
      *
-     * @param string               $method    SOAP method that was called
-     * @param mixed                $response  Response data from SOAP service
-     * @param float                $startTime Request start time from microtime(true)
-     * @param float                $endTime   Response received time from microtime(true)
-     * @param array<string, mixed> $context   Additional context information
+     * @param string               $method    SOAP method that was called.
+     * @param mixed                $response  Response data from SOAP service.
+     * @param float                $startTime Request start time from microtime(true).
+     * @param float                $endTime   Response received time from microtime(true).
+     * @param array<string, mixed> $context   Additional context information.
      *
      * @example Logging a successful VAT rates response:
      * ```php
@@ -71,6 +71,7 @@ final class ResponseEventListener
      *     'countries_requested' => ['DE', 'FR']
      * ]);
      * ```
+     *
      */
     public function logResponse(
         string $method,
@@ -115,11 +116,12 @@ final class ResponseEventListener
      * Records details when a response indicates an error condition,
      * even if the HTTP/SOAP layer succeeded.
      *
-     * @param string               $method    SOAP method that was called
-     * @param mixed                $response  Error response from service
-     * @param string               $errorType Type of error detected
-     * @param float                $duration  Request duration in milliseconds
-     * @param array<string, mixed> $context   Additional context
+     * @param string               $method    SOAP method that was called.
+     * @param mixed                $response  Error response from service.
+     * @param string               $errorType Type of error detected.
+     * @param float                $duration  Request duration in milliseconds.
+     * @param array<string, mixed> $context   Additional context.
+     *
      */
     public function logResponseError(
         string $method,
@@ -148,10 +150,11 @@ final class ResponseEventListener
      * Records detailed performance information for monitoring and
      * optimization purposes. Useful for identifying performance trends.
      *
-     * @param string               $method       SOAP method name
-     * @param float                $duration     Total request duration in milliseconds
-     * @param integer              $responseSize Response size in bytes
-     * @param array<string, mixed> $metrics      Additional performance metrics
+     * @param string               $method       SOAP method name.
+     * @param float                $duration     Total request duration in milliseconds.
+     * @param integer              $responseSize Response size in bytes.
+     * @param array<string, mixed> $metrics      Additional performance metrics.
+     *
      */
     public function logPerformanceMetrics(
         string $method,
@@ -179,8 +182,8 @@ final class ResponseEventListener
     /**
      * Get response type for logging
      *
-     * @param mixed $response Response object or data
-     * @return string Human-readable response type
+     * @param mixed $response Response object or data.
+     * @return string Human-readable response type.
      */
     private function getResponseType(mixed $response): string
     {
@@ -201,8 +204,8 @@ final class ResponseEventListener
     /**
      * Calculate response size for monitoring
      *
-     * @param mixed $response Response data
-     * @return integer Estimated size in bytes
+     * @param mixed $response Response data.
+     * @return integer Estimated size in bytes.
      */
     private function calculateResponseSize(mixed $response): int
     {
@@ -231,8 +234,8 @@ final class ResponseEventListener
     /**
      * Analyze response structure for debugging
      *
-     * @param mixed $response Response data
-     * @return array<string, mixed> Structure analysis
+     * @param mixed $response Response data.
+     * @return array<string, mixed> Structure analysis.
      */
     private function analyzeResponseStructure(mixed $response): array
     {
@@ -277,8 +280,8 @@ final class ResponseEventListener
     /**
      * Sanitize error response for safe logging
      *
-     * @param mixed $response Error response data
-     * @return mixed Sanitized response safe for logging
+     * @param mixed $response Error response data.
+     * @return mixed Sanitized response safe for logging.
      */
     private function sanitizeErrorResponse(mixed $response): mixed
     {
@@ -303,7 +306,8 @@ final class ResponseEventListener
      * This method is called by the event dispatcher when a SOAP response is received.
      * It extracts response information and logs it appropriately based on debug mode.
      *
-     * @param object $event The response event object
+     * @param object $event The response event object.
+     *
      */
     public function handleResponseEvent(object $event): void
     {
@@ -321,7 +325,7 @@ final class ResponseEventListener
     /**
      * Check if debug logging is enabled
      *
-     * @return boolean True if debug mode is active
+     * @return boolean True if debug mode is active.
      */
     public function isDebugEnabled(): bool
     {

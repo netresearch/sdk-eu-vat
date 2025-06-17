@@ -62,21 +62,25 @@ class SoapVatRetrievalClientTest extends TestCase
     public function testRetrieveVatRatesWithValidRequest(): void
     {
         $request = new VatRatesRequest(['DE', 'FR'], new DateTime('2024-01-01'));
-        $expectedResponse = new VatRatesResponse([]);
 
-        // Mock the engine to return expected response
+        // Create a mock stdClass response that simulates what the SOAP engine returns
+        $mockStdClassResponse = new \stdClass();
+        $mockStdClassResponse->vatRateResults = [];
+
+        // Mock the engine to return the stdClass response
         $mockEngine = $this->createMock(Engine::class);
         $mockEngine->expects($this->once())
             ->method('request')
             ->with('retrieveVatRates', [$request])
-            ->willReturn($expectedResponse);
+            ->willReturn($mockStdClassResponse);
 
         // Inject the mock engine directly into the client
         $client = new SoapVatRetrievalClient($this->config, $mockEngine);
 
         $response = $client->retrieveVatRates($request);
 
-        $this->assertSame($expectedResponse, $response);
+        $this->assertInstanceOf(VatRatesResponse::class, $response);
+        $this->assertCount(0, $response->getResults());
     }
 
     public function testRetrieveVatRatesHandlesRequestException(): void

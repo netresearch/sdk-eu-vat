@@ -44,7 +44,8 @@ $composerPath = __DIR__ . '/../composer.json';
 if (!file_exists($composerPath)) {
     $errors[] = "composer.json not found";
 } else {
-    $composerJson = json_decode(file_get_contents($composerPath), true);
+    $composerContent = file_get_contents($composerPath);
+    $composerJson = $composerContent !== false ? json_decode($composerContent, true) : null;
 
     if (json_last_error() !== JSON_ERROR_NONE) {
         $errors[] = "Invalid composer.json: " . json_last_error_msg();
@@ -176,7 +177,7 @@ $namespaces = [];
 foreach ($iterator as $file) {
     if ($file->isFile() && $file->getExtension() === 'php') {
         $content = file_get_contents($file->getPathname());
-        if (preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
+        if ($content !== false && preg_match('/namespace\s+([^;]+);/', $content, $matches)) {
             $namespace = $matches[1];
             if (!str_starts_with($namespace, 'Netresearch\\EuVatSdk')) {
                 $errors[] = "Invalid namespace in " . $file->getFilename() . ": $namespace";
@@ -195,24 +196,26 @@ echo "\n8. Validating examples...\n";
 $examplesDir = __DIR__ . '/../examples';
 if (is_dir($examplesDir)) {
     $examples = glob($examplesDir . '/*.php');
-    foreach ($examples as $example) {
-        $content = file_get_contents($example);
+    if ($examples !== false) {
+        foreach ($examples as $example) {
+            $content = file_get_contents($example);
 
-        // Check for syntax errors
-        $output = [];
-        $returnCode = 0;
-        exec("php -l $example 2>&1", $output, $returnCode);
+            // Check for syntax errors
+            $output = [];
+            $returnCode = 0;
+            exec("php -l $example 2>&1", $output, $returnCode);
 
-        if ($returnCode !== 0) {
-            $errors[] = "Syntax error in example: " . basename($example);
-            echo "   ✗ Syntax error: " . basename($example) . "\n";
-        } else {
-            echo "   ✓ Valid syntax: " . basename($example) . "\n";
-        }
+            if ($returnCode !== 0) {
+                $errors[] = "Syntax error in example: " . basename($example);
+                echo "   ✗ Syntax error: " . basename($example) . "\n";
+            } else {
+                echo "   ✓ Valid syntax: " . basename($example) . "\n";
+            }
 
-        // Check for require statement
-        if (!str_contains($content, 'require_once') && !str_contains($content, 'require')) {
-            $warnings[] = "Example missing autoload require: " . basename($example);
+            // Check for require statement
+            if ($content !== false && (!str_contains($content, 'require_once') && !str_contains($content, 'require'))) {
+                $warnings[] = "Example missing autoload require: " . basename($example);
+            }
         }
     }
 } else {
@@ -225,23 +228,25 @@ $wsdlPath = __DIR__ . '/../resources/VatRetrievalService.wsdl';
 if (file_exists($wsdlPath)) {
     $wsdlContent = file_get_contents($wsdlPath);
 
-    // Basic XML validation
-    libxml_use_internal_errors(true);
-    $xml = simplexml_load_string($wsdlContent);
+    if ($wsdlContent !== false) {
+        // Basic XML validation
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($wsdlContent);
 
-    if ($xml === false) {
-        $errors[] = "Invalid WSDL file: XML parsing failed";
-        foreach (libxml_get_errors() as $error) {
-            echo "   ✗ XML Error: " . $error->message;
-        }
-    } else {
-        echo "   ✓ WSDL file is valid XML\n";
-
-        // Check for expected service
-        if (str_contains($wsdlContent, 'VatRetrievalService')) {
-            echo "   ✓ WSDL contains VatRetrievalService definition\n";
+        if ($xml === false) {
+            $errors[] = "Invalid WSDL file: XML parsing failed";
+            foreach (libxml_get_errors() as $error) {
+                echo "   ✗ XML Error: " . $error->message;
+            }
         } else {
-            $warnings[] = "WSDL might not contain expected service definition";
+            echo "   ✓ WSDL file is valid XML\n";
+
+            // Check for expected service
+            if (str_contains($wsdlContent, 'VatRetrievalService')) {
+                echo "   ✓ WSDL contains VatRetrievalService definition\n";
+            } else {
+                $warnings[] = "WSDL might not contain expected service definition";
+            }
         }
     }
 } else {
@@ -289,7 +294,7 @@ if (!empty($warnings)) {
 }
 
 // Cleanup
-if (isset($tempDir) && is_dir($tempDir)) {
+if (is_dir($tempDir)) {
     rmdir($tempDir);
 }
 

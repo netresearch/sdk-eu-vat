@@ -81,10 +81,10 @@ $xmlInjectionTests = [
 
 foreach ($xmlInjectionTests as $test) {
     try {
-        $request = new VatRatesRequest([$test], new \DateTime('2024-01-01'));
-        $securityIssues[] = "XML injection payload accepted: $test";
+        $request = new VatRatesRequest($test, new \DateTime('2024-01-01'));
+        $securityIssues[] = "XML injection payload accepted: " . implode(', ', $test);
     } catch (\Exception $e) {
-        $passedChecks[] = "XML injection attempt blocked: $test";
+        $passedChecks[] = "XML injection attempt blocked: " . implode(', ', $test);
     }
 }
 
@@ -107,6 +107,7 @@ foreach ($errorScenarios as $scenario) {
     try {
         if (isset($scenario['date'])) {
             // This will throw before creating request
+            /** @phpstan-ignore-next-line */
             new VatRatesRequest(['DE'], new \DateTime($scenario['date']));
         } else {
             $request = new VatRatesRequest(
@@ -209,25 +210,27 @@ $wsdlPath = __DIR__ . '/../resources/VatRetrievalService.wsdl';
 if (file_exists($wsdlPath)) {
     $wsdlContent = file_get_contents($wsdlPath);
 
-    // Check for external entity references
-    if (strpos($wsdlContent, '<!ENTITY') !== false) {
-        $securityIssues[] = "WSDL contains entity definitions (XXE risk)";
-    } else {
-        $passedChecks[] = "WSDL does not contain entity definitions";
-    }
+    if ($wsdlContent !== false) {
+        // Check for external entity references
+        if (strpos($wsdlContent, '<!ENTITY') !== false) {
+            $securityIssues[] = "WSDL contains entity definitions (XXE risk)";
+        } else {
+            $passedChecks[] = "WSDL does not contain entity definitions";
+        }
 
-    // Check for external imports
-    if (preg_match('/<import.*location="http/i', $wsdlContent)) {
-        $securityWarnings[] = "WSDL imports external resources over HTTP";
-    } else {
-        $passedChecks[] = "WSDL does not import external HTTP resources";
-    }
+        // Check for external imports
+        if (preg_match('/<import.*location="http/i', $wsdlContent)) {
+            $securityWarnings[] = "WSDL imports external resources over HTTP";
+        } else {
+            $passedChecks[] = "WSDL does not import external HTTP resources";
+        }
 
-    // Check endpoint security
-    if (strpos($wsdlContent, 'http://') !== false && strpos($wsdlContent, 'https://') === false) {
-        $securityIssues[] = "WSDL uses non-HTTPS endpoints";
-    } else {
-        $passedChecks[] = "WSDL uses HTTPS endpoints";
+        // Check endpoint security
+        if (strpos($wsdlContent, 'http://') !== false && strpos($wsdlContent, 'https://') === false) {
+            $securityIssues[] = "WSDL uses non-HTTPS endpoints";
+        } else {
+            $passedChecks[] = "WSDL uses HTTPS endpoints";
+        }
     }
 }
 
@@ -237,6 +240,7 @@ echo "\n6. Logging Security\n";
 // Create a test logger that captures output
 $logOutput = '';
 $testLogger = new class extends \Psr\Log\AbstractLogger {
+    /** @var array<string> */
     private array $messages = [];
 
     public function log($level, \Stringable|string $message, array $context = []): void
@@ -300,10 +304,12 @@ foreach ($iterator as $file) {
         $filesChecked++;
         $content = file_get_contents($file->getPathname());
 
-        if (strpos($content, 'declare(strict_types=1);') !== false) {
-            $strictTypeFiles++;
-        } else {
-            $securityWarnings[] = "File without strict types: " . $file->getFilename();
+        if ($content !== false) {
+            if (strpos($content, 'declare(strict_types=1);') !== false) {
+                $strictTypeFiles++;
+            } else {
+                $securityWarnings[] = "File without strict types: " . $file->getFilename();
+            }
         }
     }
 }

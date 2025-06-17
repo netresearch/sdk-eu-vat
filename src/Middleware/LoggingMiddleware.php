@@ -47,8 +47,8 @@ final class LoggingMiddleware
     /**
      * Create logging middleware
      *
-     * @param LoggerInterface    $logger    PSR-3 logger implementation
-     * @param TelemetryInterface $telemetry Telemetry implementation for metrics
+     * @param LoggerInterface    $logger    PSR-3 logger implementation.
+     * @param TelemetryInterface $telemetry Telemetry implementation for metrics.
      */
     public function __construct(LoggerInterface $logger, TelemetryInterface $telemetry)
     {
@@ -63,11 +63,11 @@ final class LoggingMiddleware
      * Handles both successful operations and errors, ensuring all metrics
      * are captured appropriately.
      *
-     * @param string               $method    SOAP method being called
-     * @param array<string, mixed> $arguments Method arguments
-     * @param callable             $next      Next handler in the chain (actual SOAP call)
-     * @return mixed Result from the SOAP operation
-     * @throws Throwable Re-throws any exceptions after logging/telemetry
+     * @param string               $method    SOAP method being called.
+     * @param array<string, mixed> $arguments Method arguments.
+     * @param callable             $next      Next handler in the chain (actual SOAP call).
+     * @return mixed Result from the SOAP operation.
+     * @throws Throwable Re-throws any exceptions after logging/telemetry.
      *
      * @example Usage in SOAP client:
      * ```php
@@ -144,11 +144,12 @@ final class LoggingMiddleware
     /**
      * Log successful operation completion
      *
-     * @param string               $method        SOAP method name
-     * @param string               $correlationId Request correlation identifier
-     * @param float                $duration      Operation duration in seconds
-     * @param mixed                $result        Operation result
-     * @param array<string, mixed> $arguments     Original arguments
+     * @param string               $method        SOAP method name.
+     * @param string               $correlationId Request correlation identifier.
+     * @param float                $duration      Operation duration in seconds.
+     * @param mixed                $result        Operation result.
+     * @param array<string, mixed> $arguments     Original arguments.
+     *
      */
     private function logSuccess(
         string $method,
@@ -189,11 +190,12 @@ final class LoggingMiddleware
     /**
      * Log error during operation
      *
-     * @param string               $method        SOAP method name
-     * @param string               $correlationId Request correlation identifier
-     * @param float                $duration      Duration until error in seconds
-     * @param Throwable            $exception     Exception that occurred
-     * @param array<string, mixed> $arguments     Original arguments
+     * @param string               $method        SOAP method name.
+     * @param string               $correlationId Request correlation identifier.
+     * @param float                $duration      Duration until error in seconds.
+     * @param Throwable            $exception     Exception that occurred.
+     * @param array<string, mixed> $arguments     Original arguments.
+     *
      */
     private function logError(
         string $method,
@@ -224,10 +226,11 @@ final class LoggingMiddleware
     /**
      * Record telemetry metrics for successful operations
      *
-     * @param string               $method    SOAP method name
-     * @param float                $duration  Operation duration in seconds
-     * @param array<string, mixed> $arguments Original arguments
-     * @param mixed                $result    Operation result
+     * @param string               $method    SOAP method name.
+     * @param float                $duration  Operation duration in seconds.
+     * @param array<string, mixed> $arguments Original arguments.
+     * @param mixed                $result    Operation result.
+     *
      */
     private function recordSuccessMetrics(
         string $method,
@@ -253,10 +256,11 @@ final class LoggingMiddleware
     /**
      * Record telemetry metrics for failed operations
      *
-     * @param string               $method    SOAP method name
-     * @param float                $duration  Duration until failure in seconds
-     * @param Throwable            $exception Exception that occurred
-     * @param array<string, mixed> $arguments Original arguments
+     * @param string               $method    SOAP method name.
+     * @param float                $duration  Duration until failure in seconds.
+     * @param Throwable            $exception Exception that occurred.
+     * @param array<string, mixed> $arguments Original arguments.
+     *
      */
     private function recordErrorMetrics(
         string $method,
@@ -283,8 +287,8 @@ final class LoggingMiddleware
     /**
      * Get result type for logging and telemetry
      *
-     * @param mixed $result Operation result
-     * @return string Human-readable result type
+     * @param mixed $result Operation result.
+     * @return string Human-readable result type.
      */
     private function getResultType(mixed $result): string
     {

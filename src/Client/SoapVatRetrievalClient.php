@@ -123,9 +123,33 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     public function retrieveVatRates(VatRatesRequest $request): VatRatesResponse
     {
         try {
-            // The engine automatically converts the DTO to SOAP request structure
-            // and maps the response back to the VatRatesResponse DTO using ClassMap
-            return $this->engine->request('retrieveVatRates', [$request]);
+            /** @var \stdClass $responseObject */
+            $responseObject = $this->engine->request('retrieveVatRates', [$request]);
+
+            $results = [];
+            if (isset($responseObject->vatRateResults)) {
+                // The API might return a single object if there is only one result, so ensure it's an array.
+                $rawResults = is_array($responseObject->vatRateResults) ? $responseObject->vatRateResults : [$responseObject->vatRateResults];
+
+                foreach ($rawResults as $rawResult) {
+                    // $rawResult is a stdClass.
+                    // $rawResult->rate is already a VatRate object because we kept that ClassMap.
+                    // The 'situationOn' property might be a string or already converted by TypeConverter
+                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
+                        ? $rawResult->situationOn
+                        : new \DateTimeImmutable($rawResult->situationOn);
+
+                    $results[] = new VatRateResult(
+                        $rawResult->memberState,
+                        $rawResult->type,
+                        $rawResult->rate, // This is already a VatRate DTO
+                        $situationOn,
+                        $rawResult->comment ?? null
+                    );
+                }
+            }
+
+            return new VatRatesResponse($results);
         } catch (\SoapFault $fault) {
             // Handle SOAP faults by mapping to domain-specific exceptions
             $faultCode = $fault->faultcode ?? 'UNKNOWN';
@@ -338,12 +362,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     {
         try {
             // 1. Define the ClassMap to map WSDL elements to PHP DTOs
-            // Note: ClassMap keys must match XML element names from SOAP messages, not XSD type names
+            // We only map named types that SoapClient can handle.
+            // 'rateValueType' is a named complexType and will be mapped to our VatRate DTO.
+            // The main response and result items use anonymous types or have incompatible
+            // constructors, so we will map them manually after the request.
             $classMap = new ClassMapCollection(
-                new ClassMap('retrieveVatRatesReqMsg', VatRatesRequest::class),   // Request element name
-                new ClassMap('retrieveVatRatesRespMsg', VatRatesResponse::class), // Response element name
-                new ClassMap('vatRateResults', VatRateResult::class),             // Nested element for rate results
-                new ClassMap('rateValueType', VatRate::class),                    // Named type for rate values
+                new ClassMap('rateValueType', VatRate::class), // This mapping will work
             );
 
             // 2. Define TypeConverters for custom data types

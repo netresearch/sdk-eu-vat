@@ -34,10 +34,10 @@ use Throwable;
 class SoapFaultException extends VatServiceException
 {
     /**
-     * @param string         $message     Human-readable error message
-     * @param string         $faultCode   SOAP fault code (e.g., 'SOAP-ENV:Client', 'SOAP-ENV:Server')
-     * @param string         $faultString Original fault string from SOAP response
-     * @param Throwable|null $previous    Previous exception if any
+     * @param string         $message     Human-readable error message.
+     * @param string         $faultCode   SOAP fault code (e.g., 'SOAP-ENV:Client', 'SOAP-ENV:Server').
+     * @param string         $faultString Original fault string from SOAP response.
+     * @param Throwable|null $previous    Previous exception if any.
      */
     public function __construct(
         string $message,
