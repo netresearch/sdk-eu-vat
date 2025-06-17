@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Client;
 
+use DateTimeImmutable;
+use DOMDocument;
+use DOMXPath;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
@@ -25,6 +28,8 @@ use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterCollection;
 use Soap\ExtSoapEngine\ExtSoapOptions;
 use Soap\ExtSoapEngine\Transport\ExtSoapClientTransport;
 use Soap\ExtSoapEngine\Exception\RequestException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * SOAP client implementation for EU VAT Retrieval Service
@@ -46,10 +51,15 @@ use Soap\ExtSoapEngine\Exception\RequestException;
  * ```php
  * $config = ClientConfiguration::production($logger);
  * $client = new SoapVatRetrievalClient($config);
- *
  * $request = new VatRatesRequest(['DE', 'FR'], new DateTime('2024-01-01'));
  * $response = $client->retrieveVatRates($request);
  * ```
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * Note: High coupling is justified as this is a central integration point that orchestrates
+ * SOAP engine, DTOs, exceptions, type converters, logging, and WSDL validation.
+ * Future refactoring should extract concerns like DTO mapping, exception handling,
+ * and telemetry into dedicated services with dependency injection.
  *
  * @package Netresearch\EuVatSdk\Client
  * @author  Netresearch DTT GmbH
@@ -70,7 +80,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     /**
      * SOAP engine instance for making requests
      */
-    private Engine $engine;
+    private readonly Engine $engine;
+
+    /**
+     * PSR-3 logger instance
+     */
+    private readonly LoggerInterface $logger;
 
 
     /**
@@ -81,9 +96,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      * @throws ConfigurationException If client cannot be initialized
      */
     public function __construct(
-        private ClientConfiguration $config,
+        private readonly ClientConfiguration $config,
         ?Engine $engine = null
     ) {
+        $this->logger = $this->config->logger ?? new NullLogger();
         $this->engine = $engine ?? $this->initializeEngine();
     }
 
@@ -126,82 +142,9 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             /** @var \stdClass $responseObject */
             $responseObject = $this->engine->request('retrieveVatRates', [$request]);
 
-            $results = [];
-            if (isset($responseObject->vatRateResults)) {
-                // The API might return a single object if there is only one result, so ensure it's an array.
-                $rawResults = is_array($responseObject->vatRateResults) ? $responseObject->vatRateResults : [$responseObject->vatRateResults];
-
-                foreach ($rawResults as $rawResult) {
-                    // $rawResult is a stdClass.
-                    // $rawResult->rate is already a VatRate object because we kept that ClassMap.
-                    // The 'situationOn' property might be a string or already converted by TypeConverter
-                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
-                        ? $rawResult->situationOn
-                        : new \DateTimeImmutable($rawResult->situationOn);
-
-                    $results[] = new VatRateResult(
-                        $rawResult->memberState,
-                        $rawResult->type,
-                        $rawResult->rate, // This is already a VatRate DTO
-                        $situationOn,
-                        $rawResult->comment ?? null
-                    );
-                }
-            }
-
-            return new VatRatesResponse($results);
+            return $this->processVatRatesResponse($responseObject);
         } catch (\SoapFault $fault) {
-            // Handle SOAP faults by mapping to domain-specific exceptions
-            $faultCode = $fault->faultcode ?? 'UNKNOWN';
-            $faultString = $fault->faultstring ?? 'No fault string provided';
-            $faultDetail = $fault->detail ?? null;
-
-            // Log comprehensive fault information for debugging
-            if ($this->config->logger) {
-                $this->config->logger->error('SOAP Fault received from EU VAT service', [
-                    'fault_code' => $faultCode,
-                    'fault_string' => $faultString,
-                    'fault_detail' => $faultDetail,
-                    'fault_actor' => $fault->faultactor ?? null,
-                ]);
-            }
-
-            // Map fault codes to domain-specific exceptions based on EU service documentation
-            $exception = match ($faultCode) {
-                // Client-side validation errors
-                'TEDB-100' => new InvalidRequestException(
-                    "Invalid date format provided (TEDB-100): {$faultString}",
-                    $faultCode,
-                    $fault
-                ),
-                'TEDB-101' => new InvalidRequestException(
-                    "Invalid country code provided (TEDB-101): {$faultString}",
-                    $faultCode,
-                    $fault
-                ),
-                'TEDB-102' => new InvalidRequestException(
-                    "Empty member states array provided (TEDB-102): {$faultString}",
-                    $faultCode,
-                    $fault
-                ),
-
-                // Server-side internal errors
-                'TEDB-400' => new ServiceUnavailableException(
-                    "Internal application error in EU VAT service (TEDB-400): {$faultString}",
-                    $faultCode,
-                    $fault
-                ),
-
-                // Unhandled SOAP faults - preserve original fault information
-                default => new SoapFaultException(
-                    "SOAP fault occurred ({$faultCode}): {$faultString}",
-                    $faultCode,
-                    $faultString,
-                    $fault
-                )
-            };
-
-            throw $exception;
+            throw $this->handleSoapFault($fault);
         } catch (RequestException $e) {
             throw new ServiceUnavailableException(
                 'Network error occurred while connecting to EU VAT service: ' . $e->getMessage(),
@@ -219,6 +162,129 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     }
 
     /**
+     * Process the SOAP response and convert to VatRatesResponse DTO
+     */
+    private function processVatRatesResponse(\stdClass $responseObject): VatRatesResponse
+    {
+        $results = [];
+        if (isset($responseObject->vatRateResults)) {
+            // The API might return a single object if there is only one result, so ensure it's an array.
+            $rawResults = is_array($responseObject->vatRateResults)
+                ? $responseObject->vatRateResults
+                : [$responseObject->vatRateResults];
+
+            foreach ($rawResults as $rawResult) {
+                // $rawResult is a stdClass.
+                // Convert the rate stdClass to immutable VatRate DTO
+                $vatRate = $this->convertRateToVatRate($rawResult->rate);
+
+                // The 'situationOn' property might be a string or already converted by TypeConverter
+                $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
+                    ? $rawResult->situationOn
+                    : new DateTimeImmutable($rawResult->situationOn);
+
+                $results[] = new VatRateResult(
+                    $rawResult->memberState,
+                    $rawResult->type,
+                    $vatRate,
+                    $situationOn,
+                    $rawResult->comment ?? null
+                );
+            }
+        }
+
+        return new VatRatesResponse($results);
+    }
+
+    /**
+     * Convert stdClass rate object to immutable VatRate DTO
+     *
+     * @param mixed $rateData stdClass or VatRate object from SOAP response
+     * @throws UnexpectedResponseException If conversion fails
+     */
+    private function convertRateToVatRate(mixed $rateData): VatRate
+    {
+        // If it's already a VatRate (from ClassMap), return as-is
+        if ($rateData instanceof VatRate) {
+            return $rateData;
+        }
+
+        // If it's a stdClass, convert to VatRate
+        if ($rateData instanceof \stdClass) {
+            try {
+                return new VatRate(
+                    $rateData->type ?? 'UNKNOWN',
+                    $rateData->value ?? '0',
+                    $rateData->category ?? null
+                );
+            } catch (\Throwable $e) {
+                throw new UnexpectedResponseException(
+                    sprintf('Failed to convert rate data to VatRate: %s', $e->getMessage()),
+                    0,
+                    $e
+                );
+            }
+        }
+
+        throw new UnexpectedResponseException(
+            sprintf('Unexpected rate data type: %s', get_debug_type($rateData))
+        );
+    }
+
+    /**
+     * Handle SOAP faults by mapping to domain-specific exceptions
+     */
+    private function handleSoapFault(\SoapFault $fault): VatServiceException
+    {
+        $faultCode = $fault->faultcode ?? 'UNKNOWN';
+        $faultString = $fault->faultstring ?? 'No fault string provided';
+        $faultDetail = $fault->detail ?? null;
+
+        // Log comprehensive fault information for debugging
+        $this->logger->error('SOAP Fault received from EU VAT service', [
+            'fault_code' => $faultCode,
+            'fault_string' => $faultString,
+            'fault_detail' => $faultDetail,
+            'fault_actor' => $fault->faultactor ?? null,
+        ]);
+
+        // Map fault codes to domain-specific exceptions based on EU service documentation
+        return match ($faultCode) {
+            // Client-side validation errors
+            'TEDB-100' => new InvalidRequestException(
+                "Invalid date format provided (TEDB-100): {$faultString}",
+                $faultCode,
+                $fault
+            ),
+            'TEDB-101' => new InvalidRequestException(
+                "Invalid country code provided (TEDB-101): {$faultString}",
+                $faultCode,
+                $fault
+            ),
+            'TEDB-102' => new InvalidRequestException(
+                "Empty member states array provided (TEDB-102): {$faultString}",
+                $faultCode,
+                $fault
+            ),
+
+            // Server-side internal errors
+            'TEDB-400' => new ServiceUnavailableException(
+                "Internal application error in EU VAT service (TEDB-400): {$faultString}",
+                $faultCode,
+                $fault
+            ),
+
+            // Unhandled SOAP faults - preserve original fault information
+            default => new SoapFaultException(
+                "SOAP fault occurred ({$faultCode}): {$faultString}",
+                $faultCode,
+                $faultString,
+                $fault
+            )
+        };
+    }
+
+    /**
      * Resolve WSDL path with fallback logic
      *
      * This method implements a fallback strategy for WSDL loading:
@@ -233,42 +299,39 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     {
         // 1. Try configured WSDL path first
         if ($this->config->wsdlPath !== null) {
-            if (file_exists($this->config->wsdlPath) && is_file($this->config->wsdlPath) && is_readable($this->config->wsdlPath)) {
-                if ($this->config->logger) {
-                    $this->config->logger->debug('Using configured WSDL path', [
-                        'wsdl_path' => $this->config->wsdlPath
-                    ]);
-                }
+            if (
+                file_exists($this->config->wsdlPath)
+                && is_file($this->config->wsdlPath)
+                && is_readable($this->config->wsdlPath)
+            ) {
+                $this->logger->debug('Using configured WSDL path', [
+                    'wsdl_path' => $this->config->wsdlPath
+                ]);
                 return $this->config->wsdlPath;
             }
 
             // Log warning about invalid configured path but continue with fallback
-            if ($this->config->logger) {
-                $this->config->logger->warning('Configured WSDL path is invalid, using fallback', [
-                    'configured_path' => $this->config->wsdlPath
-                ]);
-            }
+            $this->logger->warning('Configured WSDL path is invalid, using fallback', [
+                'configured_path' => $this->config->wsdlPath
+            ]);
         }
 
         // 2. Try local bundled WSDL
-        if (file_exists(self::LOCAL_WSDL_PATH) && is_file(self::LOCAL_WSDL_PATH) && is_readable(self::LOCAL_WSDL_PATH)) {
-            // Validate WSDL file integrity
-            if ($this->validateWsdlFile(self::LOCAL_WSDL_PATH)) {
-                if ($this->config->logger) {
-                    $this->config->logger->debug('Using local bundled WSDL', [
-                        'wsdl_path' => self::LOCAL_WSDL_PATH
-                    ]);
-                }
-                return self::LOCAL_WSDL_PATH;
-            }
+        // Validate WSDL file integrity
+        if (
+            file_exists(self::LOCAL_WSDL_PATH)
+            && is_file(self::LOCAL_WSDL_PATH) && is_readable(self::LOCAL_WSDL_PATH) && $this->validateWsdlFile(self::LOCAL_WSDL_PATH)
+        ) {
+            $this->logger->debug('Using local bundled WSDL', [
+                'wsdl_path' => self::LOCAL_WSDL_PATH
+            ]);
+            return self::LOCAL_WSDL_PATH;
         }
 
         // 3. Fall back to remote WSDL
-        if ($this->config->logger) {
-            $this->config->logger->info('Using remote WSDL fallback', [
-                'wsdl_url' => self::REMOTE_WSDL_URL
-            ]);
-        }
+        $this->logger->info('Using remote WSDL fallback', [
+            'wsdl_url' => self::REMOTE_WSDL_URL
+        ]);
 
         return self::REMOTE_WSDL_URL;
     }
@@ -292,42 +355,38 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             // Load and validate XML structure with enhanced XPath validation
             $previousSetting = libxml_use_internal_errors(true);
-            $dom = new \DOMDocument();
-            $isValid = $dom->loadXML($content) !== false;
+            $dom = new DOMDocument();
+            $isValid = $dom->loadXML($content);
 
             if (!$isValid) {
-                if ($this->config->logger) {
-                    $this->config->logger->warning('WSDL file is not well-formed XML', [
-                        'wsdl_path' => $wsdlPath
-                    ]);
-                }
+                $this->logger->warning('WSDL file is not well-formed XML', [
+                    'wsdl_path' => $wsdlPath
+                ]);
                 libxml_use_internal_errors($previousSetting);
                 return false;
             }
 
             // Enhanced validation using XPath to check for required WSDL elements
-            $xpath = new \DOMXPath($dom);
+            $xpath = new DOMXPath($dom);
             $xpath->registerNamespace('wsdl', 'http://schemas.xmlsoap.org/wsdl/');
             $xpath->registerNamespace('soap', 'http://schemas.xmlsoap.org/wsdl/soap/');
 
             // Check for required WSDL structure
             $requiredElements = [
                 '//wsdl:definitions' => 'WSDL definitions element',
-                '//wsdl:service[@name="VatRetrievalService"]' => 'VatRetrievalService service definition',
-                '//wsdl:portType[@name="VatRetrievalServicePortType"]' => 'VatRetrievalServicePortType interface',
+                '//wsdl:service[@name="vatRetrievalServiceService"]' => 'vatRetrievalServiceService service definition',
+                '//wsdl:portType[@name="vatRetrievalService"]' => 'vatRetrievalService interface',
                 '//wsdl:operation[@name="retrieveVatRates"]' => 'retrieveVatRates operation'
             ];
 
-            foreach ($requiredElements as $xpath_query => $description) {
-                $nodes = $xpath->query($xpath_query);
+            foreach ($requiredElements as $xpathQuery => $description) {
+                $nodes = $xpath->query($xpathQuery);
                 if (!$nodes || $nodes->length === 0) {
-                    if ($this->config->logger) {
-                        $this->config->logger->warning('WSDL validation failed: missing required element', [
-                            'wsdl_path' => $wsdlPath,
-                            'missing_element' => $description,
-                            'xpath_query' => $xpath_query
-                        ]);
-                    }
+                    $this->logger->warning('WSDL validation failed: missing required element', [
+                        'wsdl_path' => $wsdlPath,
+                        'missing_element' => $description,
+                        'xpath_query' => $xpathQuery
+                    ]);
                     libxml_use_internal_errors($previousSetting);
                     return false;
                 }
@@ -337,12 +396,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             return true;
         } catch (\Throwable $e) {
-            if ($this->config->logger) {
-                $this->config->logger->warning('Error validating WSDL file', [
-                    'wsdl_path' => $wsdlPath,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            $this->logger->warning('Error validating WSDL file', [
+                'wsdl_path' => $wsdlPath,
+                'error' => $e->getMessage()
+            ]);
             return false;
         }
     }
@@ -362,12 +419,8 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     {
         try {
             // 1. Define the ClassMap to map WSDL elements to PHP DTOs
-            // We only map named types that SoapClient can handle.
-            // 'rateValueType' is a named complexType and will be mapped to our VatRate DTO.
-            // The main response and result items use anonymous types or have incompatible
-            // constructors, so we will map them manually after the request.
             $classMap = new ClassMapCollection(
-                new ClassMap('rateValueType', VatRate::class), // This mapping will work
+                new ClassMap('rateValueType', VatRate::class),
             );
 
             // 2. Define TypeConverters for custom data types
