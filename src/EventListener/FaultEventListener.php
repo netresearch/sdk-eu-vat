@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\EventListener;
 
+use DOMDocument;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
@@ -40,18 +41,12 @@ use SoapFault;
 final class FaultEventListener
 {
     /**
-     * PSR-3 logger for error recording
-     */
-    private LoggerInterface $logger;
-
-    /**
      * Create fault event listener with logger
      *
      * @param LoggerInterface $logger PSR-3 logger for fault recording.
      */
-    public function __construct(LoggerInterface $logger)
+    public function __construct(private readonly LoggerInterface $logger)
     {
-        $this->logger = $logger;
     }
 
     /**
@@ -182,12 +177,12 @@ final class FaultEventListener
         // If detail is a string, try to parse as XML
         if (is_string($faultDetail)) {
             $previousUseErrors = libxml_use_internal_errors(true);
-            $dom = new \DOMDocument();
+            $dom = new DOMDocument();
 
             if ($dom->loadXML($faultDetail)) {
                 // Successfully parsed as XML - extract key information
                 $details = [];
-                if ($dom->documentElement) {
+                if ($dom->documentElement instanceof \DOMElement) {
                     $details['element_name'] = $dom->documentElement->nodeName;
                     $details['text_content'] = trim($dom->documentElement->textContent);
                 }

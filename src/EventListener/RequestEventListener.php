@@ -30,25 +30,13 @@ use Psr\Log\LoggerInterface;
 final class RequestEventListener
 {
     /**
-     * PSR-3 logger for request recording
-     */
-    private LoggerInterface $logger;
-
-    /**
-     * Debug mode flag for verbose logging
-     */
-    private bool $debug;
-
-    /**
      * Create request event listener
      *
      * @param LoggerInterface $logger PSR-3 logger implementation.
      * @param boolean         $debug  Enable debug mode for verbose logging.
      */
-    public function __construct(LoggerInterface $logger, bool $debug = false)
+    public function __construct(private readonly LoggerInterface $logger, private readonly bool $debug = false)
     {
-        $this->logger = $logger;
-        $this->debug = $debug;
     }
 
     /**
@@ -92,10 +80,11 @@ final class RequestEventListener
             ];
 
             $this->logger->debug('EU VAT SOAP Request initiated with detailed payload', $debugContext);
-        } else {
-            // Production mode: Log essential information only
-            $this->logger->info('EU VAT SOAP Request initiated', $baseContext);
+            return;
         }
+
+        // Production mode: Log essential information only
+        $this->logger->info('EU VAT SOAP Request initiated', $baseContext);
     }
 
     /**

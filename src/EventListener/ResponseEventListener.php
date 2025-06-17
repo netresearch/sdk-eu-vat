@@ -30,25 +30,13 @@ use Psr\Log\LoggerInterface;
 final class ResponseEventListener
 {
     /**
-     * PSR-3 logger for response recording
-     */
-    private LoggerInterface $logger;
-
-    /**
-     * Debug mode flag for verbose logging
-     */
-    private bool $debug;
-
-    /**
      * Create response event listener
      *
      * @param LoggerInterface $logger PSR-3 logger implementation.
      * @param boolean         $debug  Enable debug mode for detailed logging.
      */
-    public function __construct(LoggerInterface $logger, bool $debug = false)
+    public function __construct(private readonly LoggerInterface $logger, private readonly bool $debug = false)
     {
-        $this->logger = $logger;
-        $this->debug = $debug;
     }
 
     /**
@@ -99,15 +87,17 @@ final class ResponseEventListener
             ];
 
             $this->logger->debug('EU VAT SOAP Response received with analysis', $debugContext);
-        } else {
-            // Production mode: Essential metrics only
-            if ($duration > 5000) {
-                // Log slow responses as warnings
-                $this->logger->warning('Slow EU VAT SOAP Response detected', $baseContext);
-            } else {
-                $this->logger->info('EU VAT SOAP Response received', $baseContext);
-            }
+            return;
         }
+
+        // Production mode: Essential metrics only
+        if ($duration > 5000) {
+            // Log slow responses as warnings
+            $this->logger->warning('Slow EU VAT SOAP Response detected', $baseContext);
+            return;
+        }
+
+        $this->logger->info('EU VAT SOAP Response received', $baseContext);
     }
 
     /**
@@ -192,7 +182,7 @@ final class ResponseEventListener
         }
 
         if (is_object($response)) {
-            $className = get_class($response);
+            $className = $response::class;
             // Simplify namespaced class names for readability
             $shortName = strrchr($className, '\\');
             return $shortName !== false ? substr($shortName, 1) : $className;
@@ -219,7 +209,7 @@ final class ResponseEventListener
                 return strlen(serialize($response));
             } catch (\Throwable) {
                 // Fallback: estimate based on object type
-                return strlen(get_class($response)) + 100; // rough estimate
+                return strlen($response::class) + 100; // rough estimate
             }
         }
 
@@ -246,7 +236,7 @@ final class ResponseEventListener
         if (is_object($response)) {
             $analysis = [
                 'type' => 'object',
-                'class' => get_class($response),
+                'class' => $response::class,
                 'public_properties' => count(get_object_vars($response)),
             ];
 
