@@ -86,38 +86,9 @@ final class ClientConfiguration
     public readonly int $timeout;
 
     /**
-     * Enable debug mode for verbose logging
-     */
-    public readonly bool $debug;
-
-    /**
-     * PSR-3 logger implementation
-     */
-    public readonly LoggerInterface $logger;
-
-    /**
      * Local WSDL file path (null for remote WSDL)
      */
     public readonly ?string $wsdlPath;
-
-    /**
-     * Telemetry implementation for observability
-     */
-    public readonly TelemetryInterface $telemetry;
-
-    /**
-     * Array of event subscriber objects for extension
-     *
-     * @var array<object>
-     */
-    public readonly array $eventSubscribers;
-
-    /**
-     * Array of middleware objects for request/response processing
-     *
-     * @var array<object>
-     */
-    public readonly array $middleware;
 
     /**
      * Private constructor enforces use of factory methods
@@ -138,37 +109,38 @@ final class ClientConfiguration
         string $endpoint,
         array $soapOptions,
         int $timeout,
-        bool $debug,
-        LoggerInterface $logger,
+        public readonly bool $debug,
+        public readonly LoggerInterface $logger,
         ?string $wsdlPath,
-        TelemetryInterface $telemetry,
-        array $eventSubscribers,
-        array $middleware
+        public readonly TelemetryInterface $telemetry,
+        /**
+         * Array of event subscriber objects for extension
+         */
+        public readonly array $eventSubscribers,
+        /**
+         * Array of middleware objects for request/response processing
+         */
+        public readonly array $middleware
     ) {
         $this->validateConfiguration($endpoint, $timeout, $wsdlPath);
 
         $this->endpoint = $endpoint;
         $this->timeout = $timeout;
-        $this->debug = $debug;
-        $this->logger = $logger;
         $this->wsdlPath = $wsdlPath;
-        $this->telemetry = $telemetry;
-        $this->eventSubscribers = $eventSubscribers;
-        $this->middleware = $middleware;
 
         // Merge SOAP options with defaults, ensuring timeout and debug are always current
         $defaultOptions = [
             'connection_timeout' => $timeout,
             'cache_wsdl' => WSDL_CACHE_DISK,
             'soap_version' => SOAP_1_1,
-            'trace' => $debug,
+            'trace' => $this->debug,
             'exceptions' => true,
         ];
 
         // User-provided options override defaults, but timeout and debug always reflect current values
         $this->soapOptions = array_merge($defaultOptions, $soapOptions, [
             'connection_timeout' => $timeout,
-            'trace' => $debug,
+            'trace' => $this->debug,
         ]);
     }
 

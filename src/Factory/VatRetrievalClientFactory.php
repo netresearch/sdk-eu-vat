@@ -14,22 +14,26 @@ use Psr\Log\NullLogger;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Factory for creating EU VAT Retrieval Service clients with various configurations
+ * Factory for creating EU VAT Retrieval Service clients
  *
  * This factory provides convenient methods to create pre-configured SOAP clients
- * for different environments and use cases. It abstracts the complex configuration
+ * for production and sandbox environments. It abstracts the complex configuration
  * setup and provides sensible defaults for common scenarios.
  *
- * @example Basic usage:
+ * Supported environments:
+ * - Production: Live EU VAT service endpoint with production-ready settings
+ * - Sandbox: Test endpoint for development and testing
+ *
+ * @example Basic production usage:
  * ```php
  * $client = VatRetrievalClientFactory::create();
  * $response = $client->retrieveVatRates(new VatRatesRequest(['DE', 'FR'], new DateTime()));
  * ```
  *
- * @example Testing with custom configuration:
+ * @example Sandbox/testing:
  * ```php
  * $logger = new ConsoleLogger();
- * $client = VatRetrievalClientFactory::createForTesting($logger);
+ * $client = VatRetrievalClientFactory::createSandbox($logger);
  * $response = $client->retrieveVatRates($request);
  * ```
  *
@@ -87,7 +91,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger = $logger ?? new NullLogger();
+        $logger ??= new NullLogger();
 
         $configuration = $config ?? ClientConfiguration::production($logger)
             ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
@@ -97,42 +101,38 @@ class VatRetrievalClientFactory
     }
 
     /**
-     * Create a client configured for testing and development
+     * Create a client configured for sandbox/testing environments
      *
-     * This creates a client configured for development/testing with:
-     * - Test endpoint (if available)
+     * This creates a client configured for sandbox/testing with:
+     * - Test endpoint (sandbox environment)
      * - Debug mode enabled for detailed logging
      * - Shorter timeout for faster failure detection
      * - Enhanced logging for debugging
      *
-     * @param LoggerInterface|null $logger          Optional logger for debug output (recommended for testing)
-     * @param boolean              $useTestEndpoint Whether to use the test endpoint (default: true)
+     * @param LoggerInterface|null $logger Optional logger for debug output (recommended for testing)
      *
-     * @return VatRetrievalClientInterface Configured client for testing
+     * @return VatRetrievalClientInterface Configured client for sandbox/testing
      *
-     * @throws ConfigurationException If the test configuration is invalid
+     * @throws ConfigurationException If the sandbox configuration is invalid
      *
-     * @example Testing with detailed logging:
+     * @example Sandbox with detailed logging:
      * ```php
-     * $logger = new \Monolog\Logger('eu-vat-test');
+     * $logger = new \Monolog\Logger('eu-vat-sandbox');
      * $logger->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout'));
      *
-     * $client = VatRetrievalClientFactory::createForTesting($logger);
+     * $client = VatRetrievalClientFactory::createSandbox($logger);
      *
      * // This will log detailed SOAP request/response information
      * $response = $client->retrieveVatRates($request);
      * ```
      */
-    public static function createForTesting(
-        ?LoggerInterface $logger = null,
-        bool $useTestEndpoint = true
+    public static function createSandbox(
+        ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger = $logger ?? new NullLogger();
-
-        $endpoint = $useTestEndpoint ? ClientConfiguration::ENDPOINT_TEST : ClientConfiguration::ENDPOINT_PRODUCTION;
+        $logger ??= new NullLogger();
 
         $configuration = ClientConfiguration::test($logger)
-            ->withEndpoint($endpoint)
+            ->withEndpoint(ClientConfiguration::ENDPOINT_TEST)
             ->withTimeout(15) // Shorter timeout for testing
             ->withDebug(true); // Enable debug logging
 
@@ -177,7 +177,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger = $logger ?? new NullLogger();
+        $logger ??= new NullLogger();
 
         $configuration = $config ?? ClientConfiguration::production($logger)
             ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
@@ -224,7 +224,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger = $logger ?? new NullLogger();
+        $logger ??= new NullLogger();
 
         $configuration = $config ?? ClientConfiguration::production($logger)
             ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
@@ -240,68 +240,5 @@ class VatRetrievalClientFactory
         }
 
         return new SoapVatRetrievalClient($configuration);
-    }
-
-    /**
-     * Create a client with environment-based configuration
-     *
-     * This method automatically selects appropriate settings based on the environment.
-     * Useful for applications that deploy to multiple environments.
-     *
-     * @param string               $environment Environment name ('production', 'staging', 'development', 'testing')
-     * @param LoggerInterface|null $logger      Optional logger
-     * @param array<string, mixed> $options     Additional options for environment-specific configuration
-     *
-     * @return VatRetrievalClientInterface Environment-specific configured client
-     *
-     * @throws ConfigurationException If the environment is not supported
-     *
-     * @example Environment-based configuration:
-     * ```php
-     * // Automatically configures based on environment
-     * $client = VatRetrievalClientFactory::createForEnvironment('production');
-     *
-     * // With custom options
-     * $client = VatRetrievalClientFactory::createForEnvironment('staging', $logger, [
-     *     'timeout' => 45,
-     *     'debug' => true
-     * ]);
-     * ```
-     */
-    public static function createForEnvironment(
-        string $environment,
-        ?LoggerInterface $logger = null,
-        array $options = []
-    ): VatRetrievalClientInterface {
-        $logger = $logger ?? new NullLogger();
-
-        $config = match (strtolower($environment)) {
-            'production' => ClientConfiguration::production($logger)
-                ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
-                ->withTimeout($options['timeout'] ?? self::DEFAULT_TIMEOUT)
-                ->withDebug($options['debug'] ?? false),
-
-            'staging' => ClientConfiguration::production($logger)
-                ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION) // Use production endpoint for staging
-                ->withTimeout($options['timeout'] ?? 45) // Longer timeout for staging
-                ->withDebug($options['debug'] ?? true), // Enable debug in staging
-
-            'development', 'dev' => ClientConfiguration::test($logger)
-                ->withEndpoint($options['endpoint'] ?? ClientConfiguration::ENDPOINT_TEST)
-                ->withTimeout($options['timeout'] ?? 15)
-                ->withDebug(true),
-
-            'testing', 'test' => ClientConfiguration::test($logger)
-                ->withEndpoint($options['endpoint'] ?? ClientConfiguration::ENDPOINT_TEST)
-                ->withTimeout($options['timeout'] ?? 10)
-                ->withDebug(true),
-
-            default => throw new ConfigurationException(
-                "Unsupported environment: {$environment}. " .
-                "Supported environments: production, staging, development, testing"
-            )
-        };
-
-        return new SoapVatRetrievalClient($config);
     }
 }

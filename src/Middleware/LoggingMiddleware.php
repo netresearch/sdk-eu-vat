@@ -35,25 +35,13 @@ use Throwable;
 final class LoggingMiddleware
 {
     /**
-     * PSR-3 logger for operation recording
-     */
-    private LoggerInterface $logger;
-
-    /**
-     * Telemetry interface for metrics recording
-     */
-    private TelemetryInterface $telemetry;
-
-    /**
      * Create logging middleware
      *
      * @param LoggerInterface    $logger    PSR-3 logger implementation.
      * @param TelemetryInterface $telemetry Telemetry implementation for metrics.
      */
-    public function __construct(LoggerInterface $logger, TelemetryInterface $telemetry)
+    public function __construct(private readonly LoggerInterface $logger, private readonly TelemetryInterface $telemetry)
     {
-        $this->logger = $logger;
-        $this->telemetry = $telemetry;
     }
 
     /**
@@ -176,15 +164,24 @@ final class LoggingMiddleware
             }
         }
 
+        // Add argument context in debug mode
+        if (getenv('APP_ENV') === 'development' && $arguments !== []) {
+            $context['argument_count'] = count($arguments);
+        }
+
         // Performance categorization
         $durationMs = $duration * 1000;
         if ($durationMs > 10000) {
             $this->logger->warning('EU VAT SOAP Operation completed (very slow)', $context);
-        } elseif ($durationMs > 5000) {
-            $this->logger->notice('EU VAT SOAP Operation completed (slow)', $context);
-        } else {
-            $this->logger->info('EU VAT SOAP Operation completed successfully', $context);
+            return;
         }
+
+        if ($durationMs > 5000) {
+            $this->logger->notice('EU VAT SOAP Operation completed (slow)', $context);
+            return;
+        }
+
+        $this->logger->info('EU VAT SOAP Operation completed successfully', $context);
     }
 
     /**
@@ -208,7 +205,7 @@ final class LoggingMiddleware
             'method' => $method,
             'correlation_id' => $correlationId,
             'duration_ms' => round($duration * 1000, 2),
-            'exception_class' => get_class($exception),
+            'exception_class' => $exception::class,
             'exception_message' => $exception->getMessage(),
             'exception_code' => $exception->getCode(),
             'failed_at' => date('c'),
@@ -218,6 +215,9 @@ final class LoggingMiddleware
         if (getenv('APP_ENV') === 'development') {
             $context['exception_file'] = $exception->getFile();
             $context['exception_line'] = $exception->getLine();
+            if ($arguments !== []) {
+                $context['argument_count'] = count($arguments);
+            }
         }
 
         $this->logger->error('EU VAT SOAP Operation failed', $context);
@@ -281,7 +281,7 @@ final class LoggingMiddleware
             $context['member_states'] = is_array($memberStates) ? $memberStates : [$memberStates];
         }
 
-        $this->telemetry->recordError($method, get_class($exception), $context);
+        $this->telemetry->recordError($method, $exception::class, $context);
     }
 
     /**
@@ -297,7 +297,7 @@ final class LoggingMiddleware
         }
 
         if (is_object($result)) {
-            $className = get_class($result);
+            $className = $result::class;
             // Simplify namespaced class names for readability
             $shortName = strrchr($className, '\\');
             return $shortName !== false ? substr($shortName, 1) : $className;
