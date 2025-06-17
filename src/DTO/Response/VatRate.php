@@ -18,7 +18,8 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  * @example Creating a VAT rate:
  * ```php
  * $rate = new VatRate('STANDARD', '19.0');
- * echo $rate->getValue(); // "19.0"
+ * echo $rate->getValue(); // BigDecimal("19.0")
+ * echo $rate->getRawValue(); // "19.0"
  * echo $rate->getType(); // "STANDARD"
  * echo $rate->isStandard(); // true
  * ```
@@ -27,7 +28,7 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  * ```php
  * $rate = new VatRate('STANDARD', '19.0');
  * $amount = BigDecimal::of('100.00');
- * $vatAmount = $amount->multipliedBy($rate->getDecimalValue())->dividedBy(100, 2);
+ * $vatAmount = $amount->multipliedBy($rate->getValue())->dividedBy(100, 2);
  * echo $vatAmount; // "19.00"
  * ```
  *
@@ -42,29 +43,39 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class VatRate
+final class VatRate implements \Stringable
 {
     private readonly string $type;
-    private readonly BigDecimal $decimalValue;
+    private ?BigDecimal $decimalValue = null;
 
     /**
-     * @param string      $type     VAT rate type (e.g., 'STANDARD', 'REDUCED', 'REDUCED[1]')
-     * @param string      $value    Percentage value as string (e.g., "19.0")
-     * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS')
-     * @throws ParseException If the value cannot be parsed as a decimal
+     * @param string      $type     VAT rate type (e.g., 'STANDARD', 'REDUCED', 'REDUCED[1]').
+     * @param string      $value    Percentage value as string (e.g., "19.0").
+     * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS').
+     * @throws ParseException If the value cannot be parsed as a decimal.
      */
     public function __construct(
         string $type,
-        string $value,
+        private readonly string $value,
         private readonly ?string $category = null
     ) {
         $this->type = strtoupper(trim($type));
+        // Initialize decimal value immediately for constructor calls
+        $this->decimalValue = $this->initializeDecimalValue();
+    }
 
+    /**
+     * Initialize the decimal value from the string value
+     *
+     * @throws ParseException If the value cannot be parsed as a decimal
+     */
+    private function initializeDecimalValue(): BigDecimal
+    {
         try {
-            $this->decimalValue = BigDecimal::of($value);
+            return BigDecimal::of($this->value);
         } catch (MathException $e) {
             throw new ParseException(
-                sprintf('Failed to parse decimal value: %s', $value),
+                sprintf('Failed to parse decimal value: %s', $this->value),
                 0,
                 $e
             );
@@ -74,7 +85,7 @@ final class VatRate
     /**
      * Get the VAT rate type
      *
-     * @return string The normalized (uppercase) rate type
+     * @return string The rate type (e.g., 'STANDARD', 'REDUCED')
      */
     public function getType(): string
     {
@@ -82,34 +93,49 @@ final class VatRate
     }
 
     /**
-     * Get the raw string value as received from the API
+     * Get the VAT rate as a BigDecimal for precise calculations
      *
-     * @return string The VAT rate percentage as a string (e.g., "19.0")
+     * @return BigDecimal The VAT rate as a BigDecimal instance
      */
-    public function getValue(): string
+    public function getValue(): BigDecimal
     {
-        return $this->decimalValue->__toString();
+        // Lazy initialization for SOAP ClassMap compatibility
+        if (!$this->decimalValue instanceof BigDecimal) {
+            $this->decimalValue = $this->initializeDecimalValue();
+        }
+        return $this->decimalValue;
     }
 
     /**
      * Get the value as a BigDecimal for precise calculations
      *
+     * @deprecated Use getValue() instead
      * @return BigDecimal The VAT rate as a BigDecimal instance
      */
     public function getDecimalValue(): BigDecimal
     {
-        return $this->decimalValue;
+        return $this->getValue();
+    }
+
+    /**
+     * Get the raw string value as received from the API
+     *
+     * @return string The VAT rate percentage as a string (e.g., "19.0")
+     */
+    public function getRawValue(): string
+    {
+        return $this->value;
     }
 
     /**
      * Get the value as float (use with caution for calculations)
      *
-     * @deprecated Since 1.0.0, use getDecimalValue() for precise calculations
+     * @deprecated Since 1.0.0, use getValue() for precise calculations
      * @return float The VAT rate as a floating-point number
      */
     public function getValueAsFloat(): float
     {
-        return $this->decimalValue->toFloat();
+        return $this->getValue()->toFloat();
     }
 
     /**
@@ -122,24 +148,25 @@ final class VatRate
         return $this->category;
     }
 
+
     /**
      * Check if this is a standard VAT rate
      *
-     * @return boolean True if the rate type is 'STANDARD'
+     * @return boolean True if the rate type is 'STANDARD' or 'DEFAULT'
      */
     public function isStandard(): bool
     {
-        return $this->type === 'STANDARD';
+        return $this->type === 'STANDARD' || $this->type === 'DEFAULT';
     }
 
     /**
      * Check if this is a reduced VAT rate
      *
-     * @return boolean True if the rate type starts with 'REDUCED'
+     * @return boolean True if the rate type starts with 'REDUCED' or is 'REDUCED_RATE'
      */
     public function isReduced(): bool
     {
-        return str_starts_with($this->type, 'REDUCED');
+        return str_starts_with($this->type, 'REDUCED') || $this->type === 'REDUCED_RATE';
     }
 
     /**
@@ -189,6 +216,6 @@ final class VatRate
      */
     public function __toString(): string
     {
-        return $this->getValue();
+        return $this->getRawValue();
     }
 }
