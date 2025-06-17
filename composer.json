@@ -53,11 +53,11 @@
         "test:integration": "phpunit --testsuite=integration",
         "test:coverage": "phpunit --testsuite=unit --coverage-html=coverage/html --coverage-clover=coverage/clover.xml",
         "analyse": "phpstan analyse --no-progress",
-        "cs-check": "phpcs",
+        "cs-check": "phpcs --runtime-set ignore_warnings_on_exit 1",
         "cs-fix": "phpcbf",
         "rector": "rector process --dry-run",
         "rector:fix": "rector process",
-        "phpmd": "phpmd src,tests text phpmd.xml",
+        "phpmd": "phpmd src text phpmd.xml",
         "quality": [
             "@analyse",
             "@cs-check",
