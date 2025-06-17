@@ -34,24 +34,22 @@ use DateTimeInterface;
 final class VatRateResult
 {
     private readonly string $memberState;
-    private readonly string $type;
 
     /**
-     * @param string            $memberState ISO 3166-1 alpha-2 country code
-     * @param string            $type        The rate type (e.g., 'STANDARD', 'REDUCED')
-     * @param VatRate           $rate        The VAT rate information
-     * @param DateTimeInterface $situationOn The date for which this rate applies
-     * @param string|null       $comment     Optional comment from the EU VAT service
+     * @param string            $memberState ISO 3166-1 alpha-2 country code.
+     * @param string            $type        The rate type (e.g., 'STANDARD', 'REDUCED').
+     * @param VatRate           $rate        The VAT rate information.
+     * @param DateTimeInterface $situationOn The date for which this rate applies.
+     * @param string|null       $comment     Optional comment from the EU VAT service.
      */
     public function __construct(
         string $memberState,
-        string $type,
+        private readonly string $type,
         private readonly VatRate $rate,
         private readonly DateTimeInterface $situationOn,
         private readonly ?string $comment = null
     ) {
         $this->memberState = strtoupper(trim($memberState));
-        $this->type = $type;
     }
 
     /**

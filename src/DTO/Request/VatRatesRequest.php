@@ -84,7 +84,7 @@ final class VatRatesRequest
      */
     private function validateAndNormalizeMemberStates(array $memberStates): void
     {
-        if (empty($memberStates)) {
+        if ($memberStates === []) {
             throw new ValidationException('Member states array cannot be empty.');
         }
 
@@ -131,7 +131,6 @@ final class VatRatesRequest
      */
     private function validateDate(DateTimeInterface $date): void
     {
-        $now = new DateTime();
         $maxFuture = new DateTime('+5 years');
         $minPast = new DateTime('2000-01-01'); // EU VAT data availability
 

@@ -7,6 +7,7 @@ namespace Netresearch\EuVatSdk\DTO\Response;
 use ArrayAccess;
 use Countable;
 use Iterator;
+use LogicException;
 
 /**
  * Response DTO containing VAT rate results for multiple member states
@@ -52,6 +53,7 @@ use Iterator;
  * @package Netresearch\EuVatSdk\DTO\Response
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
 final class VatRatesResponse implements Iterator, ArrayAccess, Countable
 {
@@ -93,11 +95,9 @@ final class VatRatesResponse implements Iterator, ArrayAccess, Countable
     public function getResultsForCountry(string $countryCode): array
     {
         $countryCode = strtoupper($countryCode);
-
-        return array_values(array_filter(
-            $this->results,
-            fn(VatRateResult $result) => $result->getMemberState() === $countryCode
-        ));
+        return $this->filterResults(
+            fn(VatRateResult $result): bool => $result->getMemberState() === $countryCode
+        );
     }
 
     /**
@@ -108,10 +108,20 @@ final class VatRatesResponse implements Iterator, ArrayAccess, Countable
      */
     public function getResultsByCategory(string $category): array
     {
-        return array_values(array_filter(
-            $this->results,
-            fn(VatRateResult $result) => $result->getRate()->getCategory() === $category
-        ));
+        return $this->filterResults(
+            fn(VatRateResult $result): bool => $result->getRate()->getCategory() === $category
+        );
+    }
+
+    /**
+     * Filter results using a callback function
+     *
+     * @param callable(VatRateResult): bool $callback Filter callback
+     * @return array<VatRateResult> Filtered results
+     */
+    private function filterResults(callable $callback): array
+    {
+        return array_values(array_filter($this->results, $callback));
     }
 
     // Iterator interface implementation
@@ -153,14 +163,16 @@ final class VatRatesResponse implements Iterator, ArrayAccess, Countable
         return $this->results[$offset];
     }
 
+    /** @SuppressWarnings(PHPMD.UnusedFormalParameter) */
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        throw new \LogicException('VatRatesResponse is immutable');
+        throw new LogicException('VatRatesResponse is immutable');
     }
 
+    /** @SuppressWarnings(PHPMD.UnusedFormalParameter) */
     public function offsetUnset(mixed $offset): void
     {
-        throw new \LogicException('VatRatesResponse is immutable');
+        throw new LogicException('VatRatesResponse is immutable');
     }
 
     // Countable interface implementation
