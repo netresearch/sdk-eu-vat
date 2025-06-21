@@ -199,4 +199,31 @@ final class FaultEventListener
         // Fallback for other types
         return ['raw_detail' => $faultDetail];
     }
+
+    /**
+     * Handle SOAP fault event for logging
+     *
+     * This method is called by the event dispatcher when a SOAP fault occurs.
+     * It extracts fault information and handles it appropriately.
+     *
+     * @param object $event The fault event object.
+     *
+     */
+    public function handleFaultEvent(object $event): void
+    {
+        // For compatibility with different event types, check if it has expected methods
+        $exception = method_exists($event, 'getException') ? $event->getException() : null;
+
+        if ($exception instanceof SoapFault) {
+            $this->handleSoapFault($exception);
+        } elseif ($exception instanceof \Throwable) {
+            // Log non-SOAP exceptions
+            $this->logger->error('Non-SOAP exception in EU VAT service', [
+                'exception_class' => $exception::class,
+                'exception_message' => $exception->getMessage(),
+                'exception_code' => $exception->getCode(),
+            ]);
+            throw $exception;
+        }
+    }
 }

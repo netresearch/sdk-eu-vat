@@ -7,6 +7,7 @@ namespace Netresearch\EuVatSdk\Client;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
+use Netresearch\EuVatSdk\Middleware\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -101,7 +102,7 @@ final class ClientConfiguration
      * @param string|null          $wsdlPath         Local WSDL file path
      * @param TelemetryInterface   $telemetry        Telemetry implementation
      * @param array<object>        $eventSubscribers Event subscriber objects
-     * @param array<object>        $middleware       Middleware objects
+     * @param array<MiddlewareInterface> $middleware Middleware objects
      *
      * @throws ConfigurationException If configuration values are invalid
      */
@@ -119,6 +120,7 @@ final class ClientConfiguration
         public readonly array $eventSubscribers,
         /**
          * Array of middleware objects for request/response processing
+         * @var array<MiddlewareInterface>
          */
         public readonly array $middleware
     ) {
@@ -424,7 +426,7 @@ final class ClientConfiguration
     /**
      * Create new instance with additional middleware
      *
-     * @param object $middleware Middleware object
+     * @param MiddlewareInterface|array<MiddlewareInterface> $middleware Middleware object or array
      * @return self New configuration instance with added middleware
      *
      * @example Add custom middleware:
@@ -433,8 +435,10 @@ final class ClientConfiguration
      *     ->withMiddleware($cachingMiddleware);
      * ```
      */
-    public function withMiddleware(object $middleware): self
+    public function withMiddleware(MiddlewareInterface|array $middleware): self
     {
+        $middlewareArray = is_array($middleware) ? $middleware : [$middleware];
+
         return new self(
             $this->endpoint,
             $this->soapOptions,
@@ -444,7 +448,7 @@ final class ClientConfiguration
             $this->wsdlPath,
             $this->telemetry,
             $this->eventSubscribers,
-            [...$this->middleware, $middleware] // Updated value
+            [...$this->middleware, ...$middlewareArray] // Updated value
         );
     }
 

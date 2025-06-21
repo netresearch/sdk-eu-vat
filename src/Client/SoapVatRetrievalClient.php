@@ -30,6 +30,10 @@ use Soap\ExtSoapEngine\Transport\ExtSoapClientTransport;
 use Soap\ExtSoapEngine\Exception\RequestException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Netresearch\EuVatSdk\Engine\EventAwareEngine;
+use Netresearch\EuVatSdk\Engine\MiddlewareEngine;
 
 /**
  * SOAP client implementation for EU VAT Retrieval Service
@@ -164,36 +168,53 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     /**
      * Process the SOAP response and convert to VatRatesResponse DTO
      */
-    private function processVatRatesResponse(\stdClass $responseObject): VatRatesResponse
+    private function processVatRatesResponse(mixed $responseObject): VatRatesResponse
     {
-        $results = [];
-        if (isset($responseObject->vatRateResults)) {
-            // The API might return a single object if there is only one result, so ensure it's an array.
-            $rawResults = is_array($responseObject->vatRateResults)
-                ? $responseObject->vatRateResults
-                : [$responseObject->vatRateResults];
-
-            foreach ($rawResults as $rawResult) {
-                // $rawResult is a stdClass.
-                // Convert the rate stdClass to immutable VatRate DTO
-                $vatRate = $this->convertRateToVatRate($rawResult->rate);
-
-                // The 'situationOn' property might be a string or already converted by TypeConverter
-                $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
-                    ? $rawResult->situationOn
-                    : new DateTimeImmutable($rawResult->situationOn);
-
-                $results[] = new VatRateResult(
-                    $rawResult->memberState,
-                    $rawResult->type,
-                    $vatRate,
-                    $situationOn,
-                    $rawResult->comment ?? null
-                );
-            }
+        // With proper ClassMap configuration, the response should already be a VatRatesResponse
+        if ($responseObject instanceof VatRatesResponse) {
+            return $responseObject;
         }
 
-        return new VatRatesResponse($results);
+        // Fallback for backward compatibility or if ClassMap fails
+        if ($responseObject instanceof \stdClass) {
+            $results = [];
+            if (isset($responseObject->vatRateResults)) {
+                // The API might return a single object if there is only one result, so ensure it's an array.
+                $rawResults = is_array($responseObject->vatRateResults)
+                    ? $responseObject->vatRateResults
+                    : [$responseObject->vatRateResults];
+
+                foreach ($rawResults as $rawResult) {
+                    // Check if the result is already a VatRateResult (from ClassMap)
+                    if ($rawResult instanceof VatRateResult) {
+                        $results[] = $rawResult;
+                        continue;
+                    }
+
+                    // Fallback: manual conversion
+                    $vatRate = $this->convertRateToVatRate($rawResult->rate);
+
+                    // The 'situationOn' property might be a string or already converted by TypeConverter
+                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
+                        ? $rawResult->situationOn
+                        : new DateTimeImmutable($rawResult->situationOn);
+
+                    $results[] = new VatRateResult(
+                        $rawResult->memberState,
+                        $rawResult->type,
+                        $vatRate,
+                        $situationOn,
+                        $rawResult->comment ?? null
+                    );
+                }
+            }
+
+            return new VatRatesResponse($results);
+        }
+
+        throw new UnexpectedResponseException(
+            sprintf('Unexpected response type: %s', get_debug_type($responseObject))
+        );
     }
 
     /**
@@ -320,7 +341,9 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
         // Validate WSDL file integrity
         if (
             file_exists(self::LOCAL_WSDL_PATH)
-            && is_file(self::LOCAL_WSDL_PATH) && is_readable(self::LOCAL_WSDL_PATH) && $this->validateWsdlFile(self::LOCAL_WSDL_PATH)
+            && is_file(self::LOCAL_WSDL_PATH)
+            && is_readable(self::LOCAL_WSDL_PATH)
+            && $this->validateWsdlFile(self::LOCAL_WSDL_PATH)
         ) {
             $this->logger->debug('Using local bundled WSDL', [
                 'wsdl_path' => self::LOCAL_WSDL_PATH
@@ -418,9 +441,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     private function initializeEngine(): Engine
     {
         try {
-            // 1. Define the ClassMap to map WSDL elements to PHP DTOs
+            // 1. Define the complete ClassMap to map WSDL elements to PHP DTOs
             $classMap = new ClassMapCollection(
                 new ClassMap('rateValueType', VatRate::class),
+                new ClassMap('vatRateResult', VatRateResult::class),
+                new ClassMap('vatRatesResponse', VatRatesResponse::class),
+                new ClassMap('vatRatesRequest', VatRatesRequest::class)
             );
 
             // 2. Define TypeConverters for custom data types
@@ -440,11 +466,40 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             ->withClassMap($classMap)
             ->withTypeMap($typeConverters);
 
-            // 4. Create the Engine
+            // 4. Create the base engine
             $driver = ExtSoapDriver::createFromOptions($options);
             $transport = new ExtSoapClientTransport($driver->getClient());
+            $baseEngine = new SimpleEngine($driver, $transport);
 
-            return new SimpleEngine($driver, $transport);
+            // 5. Add event dispatcher support if event subscribers are configured
+            $engine = $baseEngine;
+            if ($this->config->eventSubscribers !== []) {
+                $dispatcher = new EventDispatcher();
+
+                // Add configured event subscribers
+                foreach ($this->config->eventSubscribers as $subscriber) {
+                    if ($subscriber instanceof EventSubscriberInterface) {
+                        $dispatcher->addSubscriber($subscriber);
+                        continue;
+                    }
+
+                    // Log warning for invalid event listeners
+                    $this->logger->warning(
+                        'Provided event listener does not implement EventSubscriberInterface and was ignored.',
+                        ['listener_class' => $subscriber::class]
+                    );
+                }
+
+                // Wrap engine with event dispatcher
+                $engine = new EventAwareEngine($driver, $transport, $dispatcher);
+            }
+
+            // 6. Add middleware support if middleware is configured
+            if ($this->config->middleware !== []) {
+                return new MiddlewareEngine($engine, $this->config->middleware);
+            }
+
+            return $engine;
         } catch (\Throwable $e) {
             throw new ConfigurationException(
                 'Failed to initialize SOAP engine: ' . $e->getMessage(),
@@ -453,6 +508,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             );
         }
     }
+
 
     /**
      * Get the current client configuration

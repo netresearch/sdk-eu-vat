@@ -303,7 +303,7 @@ final class ResponseEventListener
     {
         // For compatibility with different event types, check if it has expected methods
         $method = method_exists($event, 'getMethod') ? $event->getMethod() : 'unknown_method';
-        $response = method_exists($event, 'getResponse') ? $event->getResponse() : null;
+        $response = method_exists($event, 'getResult') ? $event->getResult() : null;
 
         $startTime = microtime(true) - 1; // Approximate start time
         $endTime = microtime(true);

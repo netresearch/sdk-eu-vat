@@ -10,6 +10,7 @@ use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Psr\Log\LoggerInterface;
+use Netresearch\EuVatSdk\Middleware\MiddlewareInterface;
 
 /**
  * Test ClientConfiguration immutable object
@@ -150,7 +151,7 @@ class ClientConfigurationTest extends TestCase
     public function testWithMiddlewareImmutability(): void
     {
         $original = ClientConfiguration::production();
-        $middleware = new \stdClass();
+        $middleware = $this->createMock(MiddlewareInterface::class);
         $modified = $original->withMiddleware($middleware);
 
         // Original should be unchanged
@@ -165,7 +166,7 @@ class ClientConfigurationTest extends TestCase
     {
         $logger = $this->createMock(LoggerInterface::class);
         $subscriber = new \stdClass();
-        $middleware = new \stdClass();
+        $middleware = $this->createMock(MiddlewareInterface::class);
 
         $config = ClientConfiguration::production()
             ->withTimeout(45)

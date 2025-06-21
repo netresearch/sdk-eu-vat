@@ -32,7 +32,7 @@ use Throwable;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class LoggingMiddleware
+final class LoggingMiddleware implements MiddlewareInterface
 {
     /**
      * Create logging middleware
@@ -40,8 +40,10 @@ final class LoggingMiddleware
      * @param LoggerInterface    $logger    PSR-3 logger implementation.
      * @param TelemetryInterface $telemetry Telemetry implementation for metrics.
      */
-    public function __construct(private readonly LoggerInterface $logger, private readonly TelemetryInterface $telemetry)
-    {
+    public function __construct(
+        private readonly LoggerInterface $logger,
+        private readonly TelemetryInterface $telemetry
+    ) {
     }
 
     /**

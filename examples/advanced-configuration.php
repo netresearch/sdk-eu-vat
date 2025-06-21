@@ -23,6 +23,8 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Formatter\LineFormatter;
+use Netresearch\EuVatSdk\Middleware\LoggingMiddleware;
+use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
 
 echo "=== EU VAT SDK - Advanced Configuration Example ===\n\n";
 
@@ -206,30 +208,33 @@ try {
 echo "\n8. Logging and monitoring via middleware:\n";
 
 // Custom logger with structured logging
-$structuredLogger = new Logger('vat-service');
+$structuredLogger = new Logger('vat-service-middleware');
 $structuredLogger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
 
 try {
-    // Configure client with logging middleware
+    // 1. Create an instance of LoggingMiddleware
+    $loggingMiddleware = new LoggingMiddleware($structuredLogger, new NullTelemetry());
+
+    // 2. Configure the client to use the middleware
     $middlewareConfig = ClientConfiguration::production($structuredLogger)
-        ->withDebug(true); // This enables the built-in logging middleware
-    
+        ->withMiddleware([$loggingMiddleware]);
+
     $monitoredClient = VatRetrievalClientFactory::create($middlewareConfig);
-    
+
     $request = new VatRatesRequest(
         memberStates: ['DE'],
         situationOn: new DateTime('2024-01-01')
     );
-    
-    // The LoggingMiddleware will automatically log request/response details
+
+    // The LoggingMiddleware will now capture and log request/response information
     $response = $monitoredClient->retrieveVatRates($request);
-    
-    echo "   ✓ Request and response were logged automatically by middleware\n";
-    echo "   ✓ Check logs for detailed request/response information\n";
+
+    echo "   ✓ Request and response details logged via LoggingMiddleware\n";
+    echo "   ✓ Performance metrics and timing captured\n";
     
 } catch (VatServiceException $e) {
-    // The middleware will also log errors automatically
-    echo "   ✗ Error logged automatically by middleware: " . $e->getMessage() . "\n";
+    // Errors will be logged by the middleware
+    echo "   ✗ Error captured by middleware and logger: " . $e->getMessage() . "\n";
 }
 
 echo "\nAdvanced configuration examples completed!\n";

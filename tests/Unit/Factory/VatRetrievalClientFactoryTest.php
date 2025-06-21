@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Unit\Factory;
 
+use Netresearch\EuVatSdk\Engine\EventAwareEngine;
 use Netresearch\EuVatSdk\Client\ClientConfiguration;
 use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
 use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
@@ -27,7 +28,7 @@ class VatRetrievalClientFactoryTest extends TestCase
     {
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->telemetry = $this->createMock(TelemetryInterface::class);
-        $this->eventSubscriber = $this->createMock(EventSubscriberInterface::class);
+        $this->eventSubscriber = new TestEventSubscriber();
     }
 
     public function testCreateReturnsDefaultClient(): void
@@ -116,6 +117,17 @@ class VatRetrievalClientFactoryTest extends TestCase
         $client = VatRetrievalClientFactory::createWithEventSubscribers($subscribers);
 
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
+
+        // Assert that the subscriber was correctly added to the configuration
+        $config = $client->getConfiguration();
+        $this->assertNotEmpty($config->eventSubscribers);
+        $this->assertSame($subscribers, $config->eventSubscribers);
+
+        // Assert that the correct engine wrapper was used
+        // The getEngine() method is marked @internal, which is perfect for testing.
+        $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
+        $engine = $client->getEngine();
+        $this->assertInstanceOf(EventAwareEngine::class, $engine);
     }
 
     public function testCreateWithEventSubscribersThrowsExceptionForInvalidSubscriber(): void
