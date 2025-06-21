@@ -17,7 +17,7 @@ use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Exception\UnexpectedResponseException;
-use Netresearch\EuVatSdk\TypeConverter\DateTimeTypeConverter;
+use Netresearch\EuVatSdk\TypeConverter\DateTypeConverter;
 use Netresearch\EuVatSdk\TypeConverter\BigDecimalTypeConverter;
 use Soap\Engine\Engine;
 use Soap\Engine\SimpleEngine;
@@ -451,7 +451,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             // 2. Define TypeConverters for custom data types
             $typeConverters = new TypeConverterCollection([
-                new DateTimeTypeConverter(), // Converts xsd:date to DateTimeImmutable
+                new DateTypeConverter(), // Converts xsd:date to DateTimeImmutable
                 new BigDecimalTypeConverter(), // Converts xsd:decimal to Brick\Math\BigDecimal
             ]);
 
