@@ -106,27 +106,6 @@ class RequestEventListenerTest extends TestCase
         $listener->logRequestTiming('retrieveVatRates', $startTime, $preparedTime);
     }
 
-    public function testGenerateCorrelationIdReturnsUniqueIds(): void
-    {
-        $listener = new RequestEventListener($this->logger, false);
-
-        $id1 = $listener->generateCorrelationId();
-        $id2 = $listener->generateCorrelationId();
-
-        $this->assertNotEquals($id1, $id2);
-        $this->assertStringStartsWith('vat_', $id1);
-        $this->assertStringStartsWith('vat_', $id2);
-    }
-
-    public function testGenerateCorrelationIdIncludesTimestamp(): void
-    {
-        $listener = new RequestEventListener($this->logger, false);
-
-        $correlationId = $listener->generateCorrelationId();
-        $today = date('Ymd');
-
-        $this->assertStringContainsString($today, $correlationId);
-    }
 
     public function testIsDebugEnabledReturnsCorrectValue(): void
     {

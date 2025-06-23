@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Netresearch\EuVatSdk\Middleware;
 
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
+use Netresearch\EuVatSdk\Util\CorrelationIdProvider;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -37,12 +38,16 @@ final class LoggingMiddleware implements MiddlewareInterface
     /**
      * Create logging middleware
      *
-     * @param LoggerInterface    $logger    PSR-3 logger implementation.
-     * @param TelemetryInterface $telemetry Telemetry implementation for metrics.
+     * @param LoggerInterface       $logger               PSR-3 logger implementation.
+     * @param TelemetryInterface    $telemetry            Telemetry implementation for metrics.
+     * @param CorrelationIdProvider $correlationProvider  Correlation ID provider for request tracing.
+     * @param bool                  $isDebugMode          Enable debug-level logging (default: false).
      */
     public function __construct(
         private readonly LoggerInterface $logger,
-        private readonly TelemetryInterface $telemetry
+        private readonly TelemetryInterface $telemetry,
+        private readonly CorrelationIdProvider $correlationProvider = new CorrelationIdProvider(),
+        private readonly bool $isDebugMode = false
     ) {
     }
 
@@ -74,7 +79,7 @@ final class LoggingMiddleware implements MiddlewareInterface
     public function process(string $method, array $arguments, callable $next): mixed
     {
         $startTime = hrtime(true);
-        $correlationId = $this->generateCorrelationId();
+        $correlationId = $this->correlationProvider->provide();
 
         // Log operation initiation
         $this->logger->info('EU VAT SOAP Operation initiated', [
@@ -167,7 +172,7 @@ final class LoggingMiddleware implements MiddlewareInterface
         }
 
         // Add argument context in debug mode
-        if (getenv('APP_ENV') === 'development' && $arguments !== []) {
+        if ($this->isDebugMode && $arguments !== []) {
             $context['argument_count'] = count($arguments);
         }
 
@@ -214,7 +219,7 @@ final class LoggingMiddleware implements MiddlewareInterface
         ];
 
         // Add file and line for debugging (not in production due to path disclosure)
-        if (getenv('APP_ENV') === 'development') {
+        if ($this->isDebugMode) {
             $context['exception_file'] = $exception->getFile();
             $context['exception_line'] = $exception->getLine();
             if ($arguments !== []) {
@@ -308,19 +313,6 @@ final class LoggingMiddleware implements MiddlewareInterface
         return gettype($result);
     }
 
-    /**
-     * Generate unique correlation ID for request tracking
-     *
-     * @return string Unique correlation identifier
-     */
-    private function generateCorrelationId(): string
-    {
-        return sprintf(
-            'vat_%s_%s',
-            date('Ymd_His'),
-            bin2hex(random_bytes(4))
-        );
-    }
 
     /**
      * Get logger instance for external access

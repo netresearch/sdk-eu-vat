@@ -91,11 +91,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger ??= new NullLogger();
-
-        $configuration = $config ?? ClientConfiguration::production($logger)
-            ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
-            ->withTimeout(self::DEFAULT_TIMEOUT);
+        $configuration = $config ?? self::createDefaultProductionConfig($logger);
 
         return new SoapVatRetrievalClient($configuration);
     }
@@ -177,12 +173,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger ??= new NullLogger();
-
-        $configuration = $config ?? ClientConfiguration::production($logger)
-            ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
-            ->withTimeout(self::DEFAULT_TIMEOUT);
-
+        $configuration = $config ?? self::createDefaultProductionConfig($logger);
         $configuration = $configuration->withTelemetry($telemetry);
 
         return new SoapVatRetrievalClient($configuration);
@@ -224,11 +215,7 @@ class VatRetrievalClientFactory
         ?ClientConfiguration $config = null,
         ?LoggerInterface $logger = null
     ): VatRetrievalClientInterface {
-        $logger ??= new NullLogger();
-
-        $configuration = $config ?? ClientConfiguration::production($logger)
-            ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
-            ->withTimeout(self::DEFAULT_TIMEOUT);
+        $configuration = $config ?? self::createDefaultProductionConfig($logger);
 
         foreach ($eventSubscribers as $subscriber) {
             if (!$subscriber instanceof EventSubscriberInterface) {
@@ -240,5 +227,23 @@ class VatRetrievalClientFactory
         }
 
         return new SoapVatRetrievalClient($configuration);
+    }
+
+    /**
+     * Create default production configuration
+     *
+     * Provides consistent production configuration across all factory methods.
+     * This ensures all production clients have the same baseline settings.
+     *
+     * @param LoggerInterface|null $logger Optional logger (defaults to NullLogger)
+     * @return ClientConfiguration Production configuration with sensible defaults
+     */
+    private static function createDefaultProductionConfig(?LoggerInterface $logger = null): ClientConfiguration
+    {
+        $logger ??= new NullLogger();
+
+        return ClientConfiguration::production($logger)
+            ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
+            ->withTimeout(self::DEFAULT_TIMEOUT);
     }
 }

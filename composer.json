@@ -18,6 +18,7 @@
         "php-soap/ext-soap-engine": "^1.7",
         "psr/log": "^3.0",
         "brick/math": "^0.12",
+        "ramsey/uuid": "^4.7",
         "symfony/event-dispatcher": "^6.0"
     },
     "require-dev": {

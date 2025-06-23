@@ -94,11 +94,13 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      *
      * @param ClientConfiguration $config Client configuration including endpoint, timeouts, etc.
      * @param Engine|null         $engine Optional pre-configured engine (for testing)
+     * @param VatRatesResponseConverter $responseConverter Response converter (injected for testing)
      * @throws ConfigurationException If client cannot be initialized
      */
     public function __construct(
         private readonly ClientConfiguration $config,
-        ?Engine $engine = null
+        ?Engine $engine = null,
+        private readonly VatRatesResponseConverter $responseConverter = new VatRatesResponseConverter()
     ) {
         $this->logger = $this->config->logger ?? new NullLogger();
         $this->engine = $engine ?? $this->initializeEngine();
@@ -151,8 +153,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 );
             }
 
-            $converter = new VatRatesResponseConverter();
-            return $converter->convert($responseObject);
+            return $this->responseConverter->convert($responseObject);
         } catch (\SoapFault $fault) {
             // FaultEventListener should have already handled this, but as a fallback
             throw new SoapFaultException(
@@ -255,9 +256,20 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             }
 
             // Load and validate XML structure with enhanced XPath validation
+            // Protect against XXE attacks by disabling external entity loading
             $previousSetting = libxml_use_internal_errors(true);
+            $previousEntityLoader = libxml_disable_entity_loader(true);
+
             $dom = new DOMDocument();
-            $isValid = $dom->loadXML($content);
+            $isValid = false;
+
+            try {
+                // Load XML without LIBXML_NOENT to prevent entity substitution
+                $isValid = $dom->loadXML($content);
+            } finally {
+                // Always restore previous settings, even if an exception occurs
+                libxml_disable_entity_loader($previousEntityLoader);
+            }
 
             if (!$isValid) {
                 $this->logger->warning('WSDL file is not well-formed XML', [

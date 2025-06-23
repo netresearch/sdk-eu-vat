@@ -203,10 +203,21 @@ final class FaultEventListener implements EventSubscriberInterface
 
         // If detail is a string, try to parse as XML
         if (is_string($faultDetail)) {
+            // Protect against XXE attacks by disabling external entity loading
             $previousUseErrors = libxml_use_internal_errors(true);
+            $previousEntityLoader = libxml_disable_entity_loader(true);
             $dom = new DOMDocument();
+            $xmlParsed = false;
 
-            if ($dom->loadXML($faultDetail)) {
+            try {
+                // Load XML without LIBXML_NOENT to prevent entity substitution
+                $xmlParsed = $dom->loadXML($faultDetail);
+            } finally {
+                // Always restore previous settings, even if an exception occurs
+                libxml_disable_entity_loader($previousEntityLoader);
+            }
+
+            if ($xmlParsed) {
                 // Successfully parsed as XML - extract key information
                 $details = [];
                 if ($dom->documentElement instanceof \DOMElement) {

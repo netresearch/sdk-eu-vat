@@ -202,28 +202,6 @@ final class RequestEventListener implements EventSubscriberInterface
         return $result;
     }
 
-    /**
-     * Generate correlation ID for request tracking
-     *
-     * Creates a unique identifier for correlating requests across logs
-     * and systems. Useful for distributed tracing and debugging.
-     *
-     * @return string Unique correlation identifier.
-     *
-     * @example Usage in request logging:
-     * ```php
-     * $correlationId = $listener->generateCorrelationId();
-     * $listener->logRequest($method, $args, $startTime, ['correlation_id' => $correlationId]);
-     * ```
-     */
-    public function generateCorrelationId(): string
-    {
-        return sprintf(
-            'vat_%s_%s',
-            date('Ymd_His'),
-            bin2hex(random_bytes(4))
-        );
-    }
 
 
     /**

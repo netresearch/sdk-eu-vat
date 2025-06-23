@@ -1,0 +1,26 @@
+Captain Paul asked me to fix all the critical, high, and medium issues you identified. Here's my implementation plan:
+
+## Critical (XXE Vulnerability):
+1. Add `libxml_disable_entity_loader(true)` before XML parsing in:
+   - `SoapVatRetrievalClient::validateWsdlFile()` 
+   - `FaultEventListener::extractErrorDetails()`
+2. Restore previous settings after parsing
+
+## High Priority:
+1. **VatRatesResponseConverter DI**: Inject converter via constructor with optional parameter for backward compatibility
+2. **Logging consolidation**: Remove telemetry/logging from event listeners, keep only domain-specific logic (fault mapping, request logging for debugging)
+
+## Medium Priority:
+1. **Correlation ID utility**: Create `Util\CorrelationIdGenerator` class 
+2. **Environment logic**: Pass debug flag from ClientConfiguration to LoggingMiddleware
+3. **Factory refactoring**: Extract `createDefaultProductionConfig()` helper method
+
+## Implementation order:
+1. XXE fix (critical security)
+2. Correlation ID utility (shared dependency)
+3. VatRatesResponseConverter DI
+4. Remove environment logic from middleware  
+5. Consolidate logging responsibilities
+6. Factory refactoring
+
+Does this plan look sound? Any adjustments needed before I start implementation?
