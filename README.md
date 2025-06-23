@@ -11,7 +11,7 @@ A modern PHP 8.1+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/ta
 
 - 🏦 **Financial-Grade Precision**: Uses `brick/math` BigDecimal for exact VAT calculations
 - 🛡️ **Enterprise Ready**: Comprehensive error handling, logging, and telemetry
-- 🧪 **Thoroughly Tested**: 398+ tests with 95%+ coverage and real service validation
+- 🧪 **Thoroughly Tested**: 368 tests with 95%+ coverage and real service validation
 - 🔄 **Modern SOAP**: Built on `php-soap/ext-soap-engine` for reliable SOAP operations
 - 📊 **Observability**: Built-in request/response logging and metrics
 - 🚀 **Performance**: Optimized with WSDL caching and connection pooling support
@@ -94,7 +94,7 @@ use Brick\Math\BigDecimal;
 $vatRate = $result->getVatRate();
 
 // Get precise decimal value
-$rate = $vatRate->getDecimalValue(); // Returns BigDecimal
+$rate = $vatRate->getValue(); // Returns BigDecimal
 
 // Calculate VAT amount (100 EUR at 19% VAT)
 $netAmount = BigDecimal::of('100.00');
@@ -224,13 +224,28 @@ services:
 ];
 
 // app/Providers/VatServiceProvider.php
-public function register()
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
+use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
+use Psr\Log\LoggerInterface;
+
+class VatServiceProvider extends ServiceProvider
 {
-    $this->app->singleton(VatRetrievalClientInterface::class, function ($app) {
-        return VatRetrievalClientFactory::create(
-            ClientConfiguration::production($app['log'])
-        );
-    });
+    public function register(): void
+    {
+        $this->app->singleton(VatRetrievalClientInterface::class, function ($app) {
+            $logger = $app->make(LoggerInterface::class);
+            
+            return VatRetrievalClientFactory::create(
+                ClientConfiguration::production($logger)
+            );
+        });
+    }
 }
 ```
 

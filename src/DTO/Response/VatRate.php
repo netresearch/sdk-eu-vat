@@ -45,42 +45,20 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  */
 final class VatRate implements \Stringable
 {
-    private readonly string $type;
     private ?BigDecimal $decimalValue = null;
 
     /**
      * @param string      $type     VAT rate type (e.g., 'STANDARD', 'REDUCED', 'REDUCED[1]').
      * @param string      $value    Percentage value as string (e.g., "19.0").
      * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS').
-     * @throws ParseException If the value cannot be parsed as a decimal.
      */
     public function __construct(
-        string $type,
+        private readonly string $type,
         private readonly string $value,
         private readonly ?string $category = null
     ) {
-        $this->type = strtoupper(trim($type));
-        // Initialize decimal value immediately for constructor calls
-        $this->decimalValue = $this->initializeDecimalValue();
     }
 
-    /**
-     * Initialize the decimal value from the string value
-     *
-     * @throws ParseException If the value cannot be parsed as a decimal
-     */
-    private function initializeDecimalValue(): BigDecimal
-    {
-        try {
-            return BigDecimal::of($this->value);
-        } catch (MathException $e) {
-            throw new ParseException(
-                sprintf('Failed to parse decimal value: %s', $this->value),
-                0,
-                $e
-            );
-        }
-    }
 
     /**
      * Get the VAT rate type
@@ -89,20 +67,29 @@ final class VatRate implements \Stringable
      */
     public function getType(): string
     {
-        return $this->type;
+        return strtoupper(trim($this->type));
     }
 
     /**
      * Get the VAT rate as a BigDecimal for precise calculations
      *
      * @return BigDecimal The VAT rate as a BigDecimal instance
+     * @throws ParseException If the value cannot be parsed as a decimal
      */
     public function getValue(): BigDecimal
     {
-        // Lazy initialization for SOAP ClassMap compatibility
-        if (!$this->decimalValue instanceof BigDecimal) {
-            $this->decimalValue = $this->initializeDecimalValue();
+        if ($this->decimalValue === null) {
+            try {
+                $this->decimalValue = BigDecimal::of($this->value);
+            } catch (MathException $e) {
+                throw new ParseException(
+                    sprintf('Failed to parse decimal value: %s', $this->value),
+                    0,
+                    $e
+                );
+            }
         }
+
         return $this->decimalValue;
     }
 
@@ -156,7 +143,8 @@ final class VatRate implements \Stringable
      */
     public function isStandard(): bool
     {
-        return $this->type === 'STANDARD' || $this->type === 'DEFAULT';
+        $normalizedType = $this->getType();
+        return $normalizedType === 'STANDARD' || $normalizedType === 'DEFAULT';
     }
 
     /**
@@ -166,7 +154,8 @@ final class VatRate implements \Stringable
      */
     public function isReduced(): bool
     {
-        return str_starts_with($this->type, 'REDUCED') || $this->type === 'REDUCED_RATE';
+        $normalizedType = $this->getType();
+        return str_starts_with($normalizedType, 'REDUCED') || $normalizedType === 'REDUCED_RATE';
     }
 
     /**
@@ -176,7 +165,7 @@ final class VatRate implements \Stringable
      */
     public function isSuperReduced(): bool
     {
-        return $this->type === 'SUPER_REDUCED';
+        return $this->getType() === 'SUPER_REDUCED';
     }
 
     /**
@@ -186,7 +175,8 @@ final class VatRate implements \Stringable
      */
     public function isParkingRate(): bool
     {
-        return $this->type === 'PK' || $this->type === 'PARKING';
+        $normalizedType = $this->getType();
+        return $normalizedType === 'PK' || $normalizedType === 'PARKING';
     }
 
     /**
@@ -196,7 +186,8 @@ final class VatRate implements \Stringable
      */
     public function isZeroRate(): bool
     {
-        return $this->type === 'Z' || $this->type === 'ZERO';
+        $normalizedType = $this->getType();
+        return $normalizedType === 'Z' || $normalizedType === 'ZERO';
     }
 
     /**
@@ -206,7 +197,8 @@ final class VatRate implements \Stringable
      */
     public function isExempt(): bool
     {
-        return $this->type === 'E' || $this->type === 'EXEMPT';
+        $normalizedType = $this->getType();
+        return $normalizedType === 'E' || $normalizedType === 'EXEMPT';
     }
 
     /**

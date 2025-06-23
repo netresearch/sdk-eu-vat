@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Client;
 
-use DateTimeImmutable;
 use DOMDocument;
 use DOMXPath;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
@@ -143,12 +142,62 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     public function retrieveVatRates(VatRatesRequest $request): VatRatesResponse
     {
         try {
-            /** @var \stdClass $responseObject */
+            /** @var VatRatesResponse|\stdClass $responseObject */
             $responseObject = $this->engine->request('retrieveVatRates', [$request]);
 
-            return $this->processVatRatesResponse($responseObject);
+            // With proper ClassMap configuration, the response should already be a VatRatesResponse
+            if ($responseObject instanceof VatRatesResponse) {
+                return $responseObject;
+            }
+
+            // Fallback for cases where ClassMap doesn't fully hydrate the response
+            if ($responseObject instanceof \stdClass && property_exists($responseObject, 'vatRateResults')) {
+                $results = [];
+                $rawResults = is_array($responseObject->vatRateResults)
+                    ? $responseObject->vatRateResults
+                    : [$responseObject->vatRateResults];
+
+                foreach ($rawResults as $rawResult) {
+                    if ($rawResult instanceof VatRateResult) {
+                        $results[] = $rawResult;
+                        continue;
+                    }
+
+                    // Manual conversion for non-hydrated stdClass objects
+                    $vatRate = $rawResult->rate instanceof VatRate
+                        ? $rawResult->rate
+                        : new VatRate(
+                            $rawResult->rate->type ?? 'UNKNOWN',
+                            (string)($rawResult->rate->value ?? '0'),
+                            $rawResult->rate->category ?? null
+                        );
+
+                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
+                        ? $rawResult->situationOn
+                        : new \DateTimeImmutable($rawResult->situationOn);
+
+                    $results[] = new VatRateResult(
+                        $rawResult->memberState,
+                        $vatRate,
+                        $situationOn,
+                        $rawResult->comment ?? null
+                    );
+                }
+
+                return new VatRatesResponse($results);
+            }
+
+            throw new UnexpectedResponseException(
+                sprintf('Unexpected response type from SOAP engine: %s', get_debug_type($responseObject))
+            );
         } catch (\SoapFault $fault) {
-            throw $this->handleSoapFault($fault);
+            // FaultEventListener should have already handled this, but as a fallback
+            throw new SoapFaultException(
+                $fault->getMessage(),
+                $fault->faultcode ?? 'UNKNOWN',
+                $fault->faultstring ?? 'No fault string provided',
+                $fault
+            );
         } catch (RequestException $e) {
             throw new ServiceUnavailableException(
                 'Network error occurred while connecting to EU VAT service: ' . $e->getMessage(),
@@ -165,145 +214,8 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
         }
     }
 
-    /**
-     * Process the SOAP response and convert to VatRatesResponse DTO
-     */
-    private function processVatRatesResponse(mixed $responseObject): VatRatesResponse
-    {
-        // With proper ClassMap configuration, the response should already be a VatRatesResponse
-        if ($responseObject instanceof VatRatesResponse) {
-            return $responseObject;
-        }
 
-        // Fallback for backward compatibility or if ClassMap fails
-        if ($responseObject instanceof \stdClass) {
-            $results = [];
-            if (isset($responseObject->vatRateResults)) {
-                // The API might return a single object if there is only one result, so ensure it's an array.
-                $rawResults = is_array($responseObject->vatRateResults)
-                    ? $responseObject->vatRateResults
-                    : [$responseObject->vatRateResults];
 
-                foreach ($rawResults as $rawResult) {
-                    // Check if the result is already a VatRateResult (from ClassMap)
-                    if ($rawResult instanceof VatRateResult) {
-                        $results[] = $rawResult;
-                        continue;
-                    }
-
-                    // Fallback: manual conversion
-                    $vatRate = $this->convertRateToVatRate($rawResult->rate);
-
-                    // The 'situationOn' property might be a string or already converted by TypeConverter
-                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
-                        ? $rawResult->situationOn
-                        : new DateTimeImmutable($rawResult->situationOn);
-
-                    $results[] = new VatRateResult(
-                        $rawResult->memberState,
-                        $rawResult->type,
-                        $vatRate,
-                        $situationOn,
-                        $rawResult->comment ?? null
-                    );
-                }
-            }
-
-            return new VatRatesResponse($results);
-        }
-
-        throw new UnexpectedResponseException(
-            sprintf('Unexpected response type: %s', get_debug_type($responseObject))
-        );
-    }
-
-    /**
-     * Convert stdClass rate object to immutable VatRate DTO
-     *
-     * @param mixed $rateData stdClass or VatRate object from SOAP response
-     * @throws UnexpectedResponseException If conversion fails
-     */
-    private function convertRateToVatRate(mixed $rateData): VatRate
-    {
-        // If it's already a VatRate (from ClassMap), return as-is
-        if ($rateData instanceof VatRate) {
-            return $rateData;
-        }
-
-        // If it's a stdClass, convert to VatRate
-        if ($rateData instanceof \stdClass) {
-            try {
-                return new VatRate(
-                    $rateData->type ?? 'UNKNOWN',
-                    $rateData->value ?? '0',
-                    $rateData->category ?? null
-                );
-            } catch (\Throwable $e) {
-                throw new UnexpectedResponseException(
-                    sprintf('Failed to convert rate data to VatRate: %s', $e->getMessage()),
-                    0,
-                    $e
-                );
-            }
-        }
-
-        throw new UnexpectedResponseException(
-            sprintf('Unexpected rate data type: %s', get_debug_type($rateData))
-        );
-    }
-
-    /**
-     * Handle SOAP faults by mapping to domain-specific exceptions
-     */
-    private function handleSoapFault(\SoapFault $fault): VatServiceException
-    {
-        $faultCode = $fault->faultcode ?? 'UNKNOWN';
-        $faultString = $fault->faultstring ?? 'No fault string provided';
-        $faultDetail = $fault->detail ?? null;
-
-        // Log comprehensive fault information for debugging
-        $this->logger->error('SOAP Fault received from EU VAT service', [
-            'fault_code' => $faultCode,
-            'fault_string' => $faultString,
-            'fault_detail' => $faultDetail,
-            'fault_actor' => $fault->faultactor ?? null,
-        ]);
-
-        // Map fault codes to domain-specific exceptions based on EU service documentation
-        return match ($faultCode) {
-            // Client-side validation errors
-            'TEDB-100' => new InvalidRequestException(
-                "Invalid date format provided (TEDB-100): {$faultString}",
-                $faultCode,
-                $fault
-            ),
-            'TEDB-101' => new InvalidRequestException(
-                "Invalid country code provided (TEDB-101): {$faultString}",
-                $faultCode,
-                $fault
-            ),
-            'TEDB-102' => new InvalidRequestException(
-                "Empty member states array provided (TEDB-102): {$faultString}",
-                $faultCode,
-                $fault
-            ),
-
-            // Server-side internal errors
-            'TEDB-400' => new ServiceUnavailableException(
-                "Internal application error in EU VAT service (TEDB-400): {$faultString}",
-                $faultCode,
-                $fault
-            ),
-
-            // Unhandled SOAP faults - preserve original fault information
-            default => new SoapFaultException(
-                "SOAP fault occurred ({$faultCode}): {$faultString}",
-                $faultCode,
-                $faultString,
-                $fault
-            )
-        };
-    }
 
     /**
      * Resolve WSDL path with fallback logic

@@ -54,7 +54,7 @@ src/
 │   ├── RequestEventListener.php
 │   └── ResponseEventListener.php
 ├── TypeConverter/
-│   ├── DateTimeTypeConverter.php
+│   ├── DateTypeConverter.php
 │   └── BigDecimalTypeConverter.php
 ├── Middleware/
 │   └── LoggingMiddleware.php
@@ -266,14 +266,14 @@ class VatRate
     /**
      * Get the value as a BigDecimal for precise calculations
      */
-    public function getDecimalValue(): BigDecimal
+    public function getValue(): BigDecimal
     {
         return $this->decimalValue;
     }
     
     /**
      * Get the value as float (use with caution for calculations)
-     * @deprecated Use getDecimalValue() for precise calculations
+     * @deprecated Use getValue() for precise calculations
      */
     public function getValueAsFloat(): float
     {
@@ -398,7 +398,7 @@ use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterCollection;
 use Soap\ExtSoapEngine\ExtSoapOptions;
 use Soap\ExtSoapEngine\Exception\TransportException;
 use Soap\ExtSoapEngine\Exception\WsdlException;
-use Netresearch\EuVatSdk\TypeConverter\DateTimeTypeConverter;
+use Netresearch\EuVatSdk\TypeConverter\DateTypeConverter;
 use Netresearch\EuVatSdk\TypeConverter\BigDecimalTypeConverter;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
@@ -456,7 +456,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
         // 2. Define TypeConverters for custom data types
         $typeConverters = new TypeConverterCollection([
-            new DateTimeTypeConverter(), // Converts xsd:date to DateTimeImmutable
+            new DateTypeConverter(), // Converts xsd:date to DateTimeImmutable
             new BigDecimalTypeConverter(), // Converts xsd:decimal to Brick\Math\BigDecimal
         ]);
 
@@ -529,7 +529,7 @@ use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
 
-class DateTimeTypeConverter implements TypeConverterInterface
+class DateTypeConverter implements TypeConverterInterface
 {
     public function getTypeName(): string
     {
@@ -767,7 +767,7 @@ try {
         );
         
         // For calculations, use BigDecimal
-        $decimalRate = $rate->getDecimalValue();
+        $decimalRate = $rate->getValue();
         $amount = BigDecimal::of('100.00');
         $vatAmount = $amount->multipliedBy($decimalRate)->dividedBy(100, 2);
         echo "VAT on €100.00: €{$vatAmount}\n";
@@ -873,7 +873,7 @@ The SDK uses php-soap/ext-soap-engine's event system:
 - **PHP:** ^8.1
 - **ext-soap:** * (Required for SOAP client functionality)
 - **ext-libxml:** * (Required for XML processing)
-- **php-soap/ext-soap-engine:** ^2.0 (Modern SOAP client engine)
+- **php-soap/ext-soap-engine:** ^1.7 (Modern SOAP client engine)
 - **psr/log:** ^3.0 (PSR-3 logging interface)
 - **brick/math:** ^0.12 (Arbitrary-precision arithmetic for financial calculations)
 
@@ -899,7 +899,7 @@ The SDK uses php-soap/ext-soap-engine's event system:
         "php": "^8.1",
         "ext-soap": "*",
         "ext-libxml": "*",
-        "php-soap/ext-soap-engine": "^2.0",
+        "php-soap/ext-soap-engine": "^1.7",
         "psr/log": "^3.0",
         "brick/math": "^0.12"
     },

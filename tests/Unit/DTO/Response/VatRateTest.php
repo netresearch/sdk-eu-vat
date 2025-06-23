@@ -106,7 +106,8 @@ class VatRateTest extends TestCase
         $this->expectException(ParseException::class);
         $this->expectExceptionMessage('Failed to parse decimal value: not-a-number');
 
-        new VatRate('STANDARD', 'not-a-number');
+        $rate = new VatRate('STANDARD', 'not-a-number');
+        $rate->getValue(); // Trigger lazy initialization
     }
 
     public function testPreciseDecimalHandling(): void

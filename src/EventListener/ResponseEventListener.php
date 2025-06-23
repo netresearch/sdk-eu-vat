@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\EventListener;
 
+use Netresearch\EuVatSdk\Engine\SoapResponseEvent;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Event listener for logging SOAP responses
@@ -27,7 +29,7 @@ use Psr\Log\LoggerInterface;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class ResponseEventListener
+final class ResponseEventListener implements EventSubscriberInterface
 {
     /**
      * Create response event listener
@@ -37,6 +39,33 @@ final class ResponseEventListener
      */
     public function __construct(private readonly LoggerInterface $logger, private readonly bool $debug = false)
     {
+    }
+
+    /**
+     * Get subscribed events for Symfony EventDispatcher
+     *
+     * @return array<string, string>
+     */
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            SoapResponseEvent::NAME => 'onSoapResponse',
+        ];
+    }
+
+    /**
+     * Handle SOAP response event
+     *
+     * @param SoapResponseEvent $event The response event from EventAwareEngine
+     */
+    public function onSoapResponse(SoapResponseEvent $event): void
+    {
+        $this->logResponse(
+            $event->getMethod(),
+            $event->getResult(),
+            $event->getStartTime(),
+            $event->getEndTime()
+        );
     }
 
     /**
@@ -290,27 +319,6 @@ final class ResponseEventListener
         return $response;
     }
 
-    /**
-     * Handle SOAP response event for logging
-     *
-     * This method is called by the event dispatcher when a SOAP response is received.
-     * It extracts response information and logs it appropriately based on debug mode.
-     *
-     * @param object $event The response event object.
-     *
-     */
-    public function handleResponseEvent(object $event): void
-    {
-        // For compatibility with different event types, check if it has expected methods
-        $method = method_exists($event, 'getMethod') ? $event->getMethod() : 'unknown_method';
-        $response = method_exists($event, 'getResult') ? $event->getResult() : null;
-
-        $startTime = microtime(true) - 1; // Approximate start time
-        $endTime = microtime(true);
-
-        // Log the response using our existing method
-        $this->logResponse($method, $response, $startTime, $endTime);
-    }
 
     /**
      * Check if debug logging is enabled

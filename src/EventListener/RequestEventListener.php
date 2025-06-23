@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\EventListener;
 
+use Netresearch\EuVatSdk\Engine\SoapRequestEvent;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Event listener for logging outgoing SOAP requests
@@ -27,7 +29,7 @@ use Psr\Log\LoggerInterface;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class RequestEventListener
+final class RequestEventListener implements EventSubscriberInterface
 {
     /**
      * Create request event listener
@@ -37,6 +39,29 @@ final class RequestEventListener
      */
     public function __construct(private readonly LoggerInterface $logger, private readonly bool $debug = false)
     {
+    }
+
+    /**
+     * Get subscribed events for Symfony EventDispatcher
+     *
+     * @return array<string, string>
+     */
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            SoapRequestEvent::NAME => 'onSoapRequest',
+        ];
+    }
+
+    /**
+     * Handle SOAP request event
+     *
+     * @param SoapRequestEvent $event The request event from EventAwareEngine
+     */
+    public function onSoapRequest(SoapRequestEvent $event): void
+    {
+        $startTime = microtime(true);
+        $this->logRequest($event->getMethod(), $event->getArguments(), $startTime);
     }
 
     /**
@@ -200,26 +225,6 @@ final class RequestEventListener
         );
     }
 
-    /**
-     * Handle SOAP request event for logging
-     *
-     * This method is called by the event dispatcher when a SOAP request is made.
-     * It extracts request information and logs it appropriately based on debug mode.
-     *
-     * @param object $event The request event object.
-     *
-     */
-    public function handleRequestEvent(object $event): void
-    {
-        // For compatibility with different event types, check if it has expected methods
-        $method = method_exists($event, 'getMethod') ? $event->getMethod() : 'unknown_method';
-        $arguments = method_exists($event, 'getArguments') ? $event->getArguments() : [];
-
-        $startTime = microtime(true);
-
-        // Log the request using our existing method
-        $this->logRequest($method, $arguments, $startTime);
-    }
 
     /**
      * Check if debug logging is enabled

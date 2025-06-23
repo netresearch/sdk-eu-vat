@@ -218,7 +218,7 @@ try {
     // Build VAT rate lookup
     $vatRates = [];
     foreach ($response->getResults() as $result) {
-        $vatRates[$result->getMemberState()] = $result->getVatRate()->getDecimalValue();
+        $vatRates[$result->getMemberState()] = $result->getVatRate()->getValue();
     }
     
     echo "   Product pricing with VAT:\n";

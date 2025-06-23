@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Netresearch\EuVatSdk\EventListener;
 
 use DOMDocument;
+use Netresearch\EuVatSdk\Engine\SoapFaultEvent;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Psr\Log\LoggerInterface;
 use SoapFault;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Event listener for mapping SOAP faults to domain-specific exceptions
@@ -38,7 +40,7 @@ use SoapFault;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class FaultEventListener
+final class FaultEventListener implements EventSubscriberInterface
 {
     /**
      * Create fault event listener with logger
@@ -47,6 +49,31 @@ final class FaultEventListener
      */
     public function __construct(private readonly LoggerInterface $logger)
     {
+    }
+
+    /**
+     * Get subscribed events for Symfony EventDispatcher
+     *
+     * @return array<string, string>
+     */
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            SoapFaultEvent::NAME => 'onSoapFault',
+        ];
+    }
+
+    /**
+     * Handle SOAP fault event
+     *
+     * @param SoapFaultEvent $event The fault event from EventAwareEngine
+     */
+    public function onSoapFault(SoapFaultEvent $event): void
+    {
+        $exception = $event->getException();
+        if ($exception instanceof SoapFault) {
+            $this->handleSoapFault($exception);
+        }
     }
 
     /**
@@ -198,32 +225,5 @@ final class FaultEventListener
 
         // Fallback for other types
         return ['raw_detail' => $faultDetail];
-    }
-
-    /**
-     * Handle SOAP fault event for logging
-     *
-     * This method is called by the event dispatcher when a SOAP fault occurs.
-     * It extracts fault information and handles it appropriately.
-     *
-     * @param object $event The fault event object.
-     *
-     */
-    public function handleFaultEvent(object $event): void
-    {
-        // For compatibility with different event types, check if it has expected methods
-        $exception = method_exists($event, 'getException') ? $event->getException() : null;
-
-        if ($exception instanceof SoapFault) {
-            $this->handleSoapFault($exception);
-        } elseif ($exception instanceof \Throwable) {
-            // Log non-SOAP exceptions
-            $this->logger->error('Non-SOAP exception in EU VAT service', [
-                'exception_class' => $exception::class,
-                'exception_message' => $exception->getMessage(),
-                'exception_code' => $exception->getCode(),
-            ]);
-            throw $exception;
-        }
     }
 }

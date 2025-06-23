@@ -118,7 +118,7 @@ try {
             echo "     - Date: " . $result->getSituationOn()->format('Y-m-d') . "\n";
             
             // Get precise decimal value for calculations
-            $decimalRate = $vatRate->getDecimalValue();
+            $decimalRate = $vatRate->getValue();
             echo "     - Decimal rate: " . $decimalRate->__toString() . "\n";
             
             break;

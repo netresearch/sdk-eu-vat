@@ -22,11 +22,11 @@ class VatRatesResponseTest extends TestCase
         $date = new DateTime('2024-01-01');
 
         $results = [
-            new VatRateResult('DE', 'STANDARD', new VatRate('STANDARD', '19.0'), $date),
-            new VatRateResult('DE', 'REDUCED', new VatRate('REDUCED', '7.0', 'FOODSTUFFS'), $date),
-            new VatRateResult('FR', 'STANDARD', new VatRate('STANDARD', '20.0'), $date),
-            new VatRateResult('FR', 'REDUCED', new VatRate('REDUCED', '5.5', 'FOODSTUFFS'), $date),
-            new VatRateResult('IT', 'STANDARD', new VatRate('STANDARD', '22.0'), $date),
+            new VatRateResult('DE', new VatRate('STANDARD', '19.0'), $date),
+            new VatRateResult('DE', new VatRate('REDUCED', '7.0', 'FOODSTUFFS'), $date),
+            new VatRateResult('FR', new VatRate('STANDARD', '20.0'), $date),
+            new VatRateResult('FR', new VatRate('REDUCED', '5.5', 'FOODSTUFFS'), $date),
+            new VatRateResult('IT', new VatRate('STANDARD', '22.0'), $date),
         ];
 
         $this->response = new VatRatesResponse($results);
@@ -108,7 +108,7 @@ class VatRatesResponseTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('VatRatesResponse is immutable');
 
-        $this->response[0] = new VatRateResult('XX', 'STANDARD', new VatRate('STANDARD', '0.0'), new DateTime());
+        $this->response[0] = new VatRateResult('XX', new VatRate('STANDARD', '0.0'), new DateTime());
     }
 
     public function testArrayUnsetIsImmutable(): void

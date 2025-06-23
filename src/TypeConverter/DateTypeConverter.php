@@ -102,20 +102,69 @@ final class DateTypeConverter implements TypeConverterInterface
     private function extractDateFromXml(string $data): string
     {
         // Check if data contains XML tags
-        if (str_contains($data, '<') && str_contains($data, '>')) {
-            // Extract content between XML tags using regex
-            if (preg_match('/>([^<]+)</', $data, $matches)) {
-                return trim($matches[1]);
-            }
+        if (!str_contains($data, '<') || !str_contains($data, '>')) {
+            return $data;
+        }
 
-            // Fallback: try to extract date pattern from XML
-            if (preg_match('/(\d{4}-\d{2}-\d{2}(?:\+\d{2}:\d{2})?)/', $data, $matches)) {
-                // Remove timezone offset if present for date-only converter
-                return substr($matches[1], 0, 10);
-            }
+        // Try proper XML parsing first
+        $cleanDate = $this->parseXmlSafely($data);
+        if ($cleanDate !== null) {
+            return $cleanDate;
+        }
+
+        // Fallback: Extract content between XML tags using regex
+        if (preg_match('/>([^<]+)</', $data, $matches)) {
+            return trim($matches[1]);
+        }
+
+        // Last resort: Extract date pattern from XML
+        if (preg_match('/(\d{4}-\d{2}-\d{2}(?:\+\d{2}:\d{2})?)/', $data, $matches)) {
+            // Remove timezone offset if present for date-only converter
+            return substr($matches[1], 0, 10);
         }
 
         return $data;
+    }
+
+    /**
+     * Safely parse XML content to extract date value
+     *
+     * @param string $xmlData XML content that might contain a date
+     * @return string|null Clean date string or null if parsing fails
+     */
+    private function parseXmlSafely(string $xmlData): ?string
+    {
+        try {
+            // Attempt to parse as XML fragment
+            $previousSetting = libxml_use_internal_errors(true);
+
+            // Try to wrap fragment in a root element if needed
+            $wrappedXml = str_starts_with(trim($xmlData), '<')
+                ? $xmlData
+                : "<root>$xmlData</root>";
+
+            $dom = new \DOMDocument();
+            $dom->loadXML($wrappedXml);
+
+            // Get the text content (this handles CDATA, nested tags, etc.)
+            $textContent = $dom->textContent;
+
+            libxml_use_internal_errors($previousSetting);
+
+            if (!empty($textContent)) {
+                $trimmed = trim($textContent);
+                // Validate it looks like a date and extract just the date part
+                if (preg_match('/(\d{4}-\d{2}-\d{2})/', $trimmed, $matches)) {
+                    return $matches[1];
+                }
+                return $trimmed;
+            }
+        } catch (\Throwable) {
+            // XML parsing failed, fall back to regex
+            libxml_use_internal_errors($previousSetting ?? false);
+        }
+
+        return null;
     }
 
     /**

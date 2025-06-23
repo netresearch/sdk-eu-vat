@@ -235,7 +235,7 @@ class EnterpriseVatService
                     'country' => $result->getMemberState(),
                     'rate' => $result->getVatRate()->getValue(),
                     'type' => $result->getVatRate()->getType(),
-                    'decimal_rate' => $result->getVatRate()->getDecimalValue(),
+                    'decimal_rate' => $result->getVatRate()->getValue(),
                     'date' => $result->getSituationOn()->format('Y-m-d'),
                 ];
             }

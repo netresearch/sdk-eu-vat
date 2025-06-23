@@ -30,6 +30,8 @@ final class EventAwareEngine implements Engine
      */
     public function request(string $method, array $arguments): mixed
     {
+        $startTime = microtime(true);
+
         // Dispatch request event if dispatcher is available
         if ($this->dispatcher instanceof EventDispatcherInterface) {
             $requestEvent = new SoapRequestEvent($method, $arguments);
@@ -41,14 +43,18 @@ final class EventAwareEngine implements Engine
             $response = $this->transport->request($request);
             $result = $this->driver->decode($method, $response);
 
+            $endTime = microtime(true);
+
             // Dispatch response event if dispatcher is available
             if ($this->dispatcher instanceof EventDispatcherInterface) {
-                $responseEvent = new SoapResponseEvent($method, $result);
+                $responseEvent = new SoapResponseEvent($method, $result, $startTime, $endTime);
                 $this->dispatcher->dispatch($responseEvent, SoapResponseEvent::NAME);
             }
 
             return $result;
         } catch (\Throwable $exception) {
+            $endTime = microtime(true);
+
             // Dispatch fault event if dispatcher is available
             if ($this->dispatcher instanceof EventDispatcherInterface) {
                 $faultEvent = new SoapFaultEvent($method, $exception);
