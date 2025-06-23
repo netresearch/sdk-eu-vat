@@ -78,7 +78,7 @@ final class VatRate implements \Stringable
      */
     public function getValue(): BigDecimal
     {
-        if ($this->decimalValue === null) {
+        if (!$this->decimalValue instanceof BigDecimal) {
             try {
                 $this->decimalValue = BigDecimal::of($this->value);
             } catch (MathException $e) {

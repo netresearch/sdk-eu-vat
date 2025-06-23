@@ -6,6 +6,7 @@ namespace Netresearch\EuVatSdk\TypeConverter;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use DOMDocument;
 use Netresearch\EuVatSdk\Exception\ParseException;
 use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterInterface;
 use Throwable;
@@ -143,7 +144,7 @@ final class DateTypeConverter implements TypeConverterInterface
                 ? $xmlData
                 : "<root>$xmlData</root>";
 
-            $dom = new \DOMDocument();
+            $dom = new DOMDocument();
             $dom->loadXML($wrappedXml);
 
             // Get the text content (this handles CDATA, nested tags, etc.)
@@ -151,7 +152,7 @@ final class DateTypeConverter implements TypeConverterInterface
 
             libxml_use_internal_errors($previousSetting);
 
-            if (!empty($textContent)) {
+            if ($textContent !== '' && $textContent !== '0') {
                 $trimmed = trim($textContent);
                 // Validate it looks like a date and extract just the date part
                 if (preg_match('/(\d{4}-\d{2}-\d{2})/', $trimmed, $matches)) {

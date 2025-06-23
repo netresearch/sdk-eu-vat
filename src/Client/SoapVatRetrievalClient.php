@@ -8,21 +8,19 @@ use DOMDocument;
 use DOMXPath;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
-use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
-use Netresearch\EuVatSdk\DTO\Response\VatRate;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Exception\UnexpectedResponseException;
+use Netresearch\EuVatSdk\Exception\ConversionException;
 use Netresearch\EuVatSdk\TypeConverter\DateTypeConverter;
 use Netresearch\EuVatSdk\TypeConverter\BigDecimalTypeConverter;
+use Netresearch\EuVatSdk\Converter\VatRatesResponseConverter;
 use Soap\Engine\Engine;
 use Soap\Engine\SimpleEngine;
 use Soap\ExtSoapEngine\ExtSoapDriver;
-use Soap\ExtSoapEngine\Configuration\ClassMap\ClassMapCollection;
-use Soap\ExtSoapEngine\Configuration\ClassMap\ClassMap;
 use Soap\ExtSoapEngine\Configuration\TypeConverter\TypeConverterCollection;
 use Soap\ExtSoapEngine\ExtSoapOptions;
 use Soap\ExtSoapEngine\Transport\ExtSoapClientTransport;
@@ -142,54 +140,19 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     public function retrieveVatRates(VatRatesRequest $request): VatRatesResponse
     {
         try {
-            /** @var VatRatesResponse|\stdClass $responseObject */
+            /** @var \stdClass $responseObject */
             $responseObject = $this->engine->request('retrieveVatRates', [$request]);
 
-            // With proper ClassMap configuration, the response should already be a VatRatesResponse
-            if ($responseObject instanceof VatRatesResponse) {
-                return $responseObject;
+            // Convert stdClass response to strongly-typed DTO using dedicated converter
+            // With ClassMap removed, SOAP engine should always return stdClass
+            if (!$responseObject instanceof \stdClass) {
+                throw new UnexpectedResponseException(
+                    sprintf('Expected stdClass response from SOAP engine, got: %s', get_debug_type($responseObject))
+                );
             }
 
-            // Fallback for cases where ClassMap doesn't fully hydrate the response
-            if ($responseObject instanceof \stdClass && property_exists($responseObject, 'vatRateResults')) {
-                $results = [];
-                $rawResults = is_array($responseObject->vatRateResults)
-                    ? $responseObject->vatRateResults
-                    : [$responseObject->vatRateResults];
-
-                foreach ($rawResults as $rawResult) {
-                    if ($rawResult instanceof VatRateResult) {
-                        $results[] = $rawResult;
-                        continue;
-                    }
-
-                    // Manual conversion for non-hydrated stdClass objects
-                    $vatRate = $rawResult->rate instanceof VatRate
-                        ? $rawResult->rate
-                        : new VatRate(
-                            $rawResult->rate->type ?? 'UNKNOWN',
-                            (string)($rawResult->rate->value ?? '0'),
-                            $rawResult->rate->category ?? null
-                        );
-
-                    $situationOn = $rawResult->situationOn instanceof \DateTimeInterface
-                        ? $rawResult->situationOn
-                        : new \DateTimeImmutable($rawResult->situationOn);
-
-                    $results[] = new VatRateResult(
-                        $rawResult->memberState,
-                        $vatRate,
-                        $situationOn,
-                        $rawResult->comment ?? null
-                    );
-                }
-
-                return new VatRatesResponse($results);
-            }
-
-            throw new UnexpectedResponseException(
-                sprintf('Unexpected response type from SOAP engine: %s', get_debug_type($responseObject))
-            );
+            $converter = new VatRatesResponseConverter();
+            return $converter->convert($responseObject);
         } catch (\SoapFault $fault) {
             // FaultEventListener should have already handled this, but as a fallback
             throw new SoapFaultException(
@@ -204,6 +167,9 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 null, // errorCode should be null for network errors
                 $e
             );
+        } catch (ConversionException $e) {
+            // Let ConversionException pass through - it's a domain exception
+            throw $e;
         } catch (\Throwable $e) {
             // Catch any other unexpected errors and wrap them for a consistent API.
             throw new UnexpectedResponseException(
@@ -353,13 +319,8 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     private function initializeEngine(): Engine
     {
         try {
-            // 1. Define the complete ClassMap to map WSDL elements to PHP DTOs
-            $classMap = new ClassMapCollection(
-                new ClassMap('rateValueType', VatRate::class),
-                new ClassMap('vatRateResult', VatRateResult::class),
-                new ClassMap('vatRatesResponse', VatRatesResponse::class),
-                new ClassMap('vatRatesRequest', VatRatesRequest::class)
-            );
+            // ClassMap has been removed - incompatible with constructor-based immutable DTOs
+            // All object hydration is now handled by VatRatesResponseConverter for clean separation
 
             // 2. Define TypeConverters for custom data types
             $typeConverters = new TypeConverterCollection([
@@ -375,7 +336,6 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 'connection_timeout' => $this->config->timeout,
                 ...$this->config->soapOptions
             ])
-            ->withClassMap($classMap)
             ->withTypeMap($typeConverters);
 
             // 4. Create the base engine
