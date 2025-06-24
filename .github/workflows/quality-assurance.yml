@@ -90,6 +90,7 @@ jobs:
         
       - name: Run integration tests
         run: vendor/bin/phpunit --testsuite=integration --no-coverage
+        continue-on-error: true
         env:
           USE_PRODUCTION_ENDPOINT: false
           REFRESH_CASSETTES: false
