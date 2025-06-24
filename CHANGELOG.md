@@ -90,78 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batch processing techniques
 - Enterprise integration patterns
 
-## Migration Guides
+## Additional Documentation
 
-### From Legacy VAT Services
-
-If you're migrating from a legacy VAT service implementation:
-
-1. **Replace direct SOAP calls** with the SDK client:
-   ```php
-   // Old approach
-   $soapClient = new SoapClient($wsdlUrl);
-   $result = $soapClient->retrieveVatRates($params);
-   
-   // New approach
-   $client = VatRetrievalClientFactory::create();
-   $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-   $response = $client->retrieveVatRates($request);
-   ```
-
-2. **Update error handling** to use typed exceptions:
-   ```php
-   // Old approach
-   try {
-       $result = $soapClient->call();
-   } catch (SoapFault $e) {
-       // Generic error handling
-   }
-   
-   // New approach
-   try {
-       $response = $client->retrieveVatRates($request);
-   } catch (InvalidRequestException $e) {
-       // Handle validation errors
-   } catch (ServiceUnavailableException $e) {
-       // Handle service issues
-   }
-   ```
-
-3. **Migrate to BigDecimal** for financial calculations:
-   ```php
-   // Old approach (floating point issues)
-   $vatAmount = $netAmount * ($vatRate / 100);
-   
-   // New approach (precise)
-   $net = BigDecimal::of($netAmount);
-   $rate = BigDecimal::of($vatRate);
-   $vatAmount = $net->multipliedBy($rate)->dividedBy('100', 2);
-   ```
-
-## Security Considerations
-
-### Supported Security Features
-- Input validation and sanitization
-- SOAP injection protection
-- Secure error message handling
-- TLS/SSL for all communications
-- No sensitive data in logs
-
-### Security Updates
-This section will be updated with any security-related changes or advisories.
-
-## Performance Notes
-
-### Benchmarks
-- Typical response time: ~10ms for single country requests
-- Memory usage: ~2MB for full EU member state queries
-- WSDL caching reduces initialization by ~100ms
-
-### Optimization Tips
-- Use WSDL caching in production (`WSDL_CACHE_DISK`)
-- Batch multiple countries in single requests
-- Implement application-level caching for frequently accessed rates
-- Use appropriate timeouts for your use case
+For detailed guides and best practices, see the `docs/` directory:
+- [Migration Guide](docs/migration-guide.md) - Migrating from legacy VAT services
+- [Security Guide](docs/security.md) - Security considerations and best practices  
+- [Performance Guide](docs/performance.md) - Optimization tips and benchmarks
 
 ## Breaking Changes
 

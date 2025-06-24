@@ -18,6 +18,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
+use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 
 // Create a basic client with default configuration
 $client = VatRetrievalClientFactory::create();
@@ -39,7 +40,7 @@ try {
         printf(
             "   %s: %s%% (%s rate)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue(),
+            $result->getVatRate()->getValue()->__toString(),
             $result->getVatRate()->getType()
         );
     }
@@ -60,7 +61,7 @@ try {
         printf(
             "   %s: %s%% (%s)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue(),
+            $result->getVatRate()->getValue()->__toString(),
             $result->getVatRate()->getType()
         );
     }
@@ -70,24 +71,35 @@ try {
     // Example 3: Historical rates (Brexit example)
     echo "3. Historical VAT rates (UK before Brexit):\n";
     
+    // First, show successful request for GB before Brexit
     $request = new VatRatesRequest(
         memberStates: ['GB'],
         situationOn: new DateTime('2020-01-01')  // Before Brexit
     );
 
+    $response = $client->retrieveVatRates($request);
+    foreach ($response->getResults() as $result) {
+        printf(
+            "   %s (2020): %s%% (%s)\n",
+            $result->getMemberState(),
+            $result->getVatRate()->getValue()->__toString(),
+            $result->getVatRate()->getType()
+        );
+    }
+    
+    echo "\n   Now trying GB after Brexit (this will fail):\n";
+    
+    // Second, show expected error for GB after Brexit
+    $postBrexitRequest = new VatRatesRequest(
+        memberStates: ['GB'],
+        situationOn: new DateTime('2022-01-01')  // After Brexit
+    );
+
     try {
-        $response = $client->retrieveVatRates($request);
-        
-        foreach ($response->getResults() as $result) {
-            printf(
-                "   %s (2020): %s%% (%s)\n",
-                $result->getMemberState(),
-                $result->getVatRate()->getValue(),
-                $result->getVatRate()->getType()
-            );
-        }
-    } catch (VatServiceException $e) {
-        echo "   Expected error for GB after Brexit: " . $e->getMessage() . "\n";
+        $response = $client->retrieveVatRates($postBrexitRequest);
+        echo "   Unexpected: GB request succeeded after Brexit\n";
+    } catch (InvalidRequestException $e) {
+        echo "   ✓ Expected error for GB after Brexit: " . $e->getMessage() . "\n";
     }
 
     echo "\n";
@@ -113,7 +125,7 @@ try {
             
             echo "   Germany details:\n";
             echo "     - Country: " . $result->getMemberState() . "\n";
-            echo "     - Rate: " . $vatRate->getValue() . "%\n";
+            echo "     - Rate: " . $vatRate->getValue()->__toString() . "%\n";
             echo "     - Type: " . $vatRate->getType() . "\n";
             echo "     - Date: " . $result->getSituationOn()->format('Y-m-d') . "\n";
             

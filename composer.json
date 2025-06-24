@@ -69,8 +69,5 @@
             "@test:unit",
             "@quality"
         ]
-    },
-    "suggest": {
-        "monolog/monolog": "For advanced logging capabilities"
     }
 }

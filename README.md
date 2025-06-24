@@ -31,6 +31,10 @@ Install via Composer:
 composer require netresearch/sdk-eu-vat
 ```
 
+**Requirements:** PHP 8.1+, `ext-soap` and `ext-libxml` extensions
+
+📖 **Need help installing dependencies?** See the detailed [Installation Guide](INSTALLATION.md) for platform-specific instructions.
+
 ## Quick Start
 
 ```php
@@ -55,7 +59,7 @@ try {
         echo sprintf(
             "VAT rate for %s: %s%%\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()
+            $result->getVatRate()->getValue()->__toString()
         );
     }
 } catch (\Netresearch\EuVatSdk\Exception\VatServiceException $e) {
@@ -80,7 +84,7 @@ foreach ($response->getResults() as $result) {
     printf(
         "%s: %s%% (%s rate)\n",
         $result->getMemberState(),
-        $result->getVatRate()->getValue(),
+        $result->getVatRate()->getValue()->__toString(),
         $result->getVatRate()->getType()
     );
 }
@@ -101,9 +105,10 @@ $netAmount = BigDecimal::of('100.00');
 $vatAmount = $netAmount->multipliedBy($rate)->dividedBy('100', 2);
 $grossAmount = $netAmount->plus($vatAmount);
 
-echo "Net: €{$netAmount}\n";
-echo "VAT: €{$vatAmount}\n"; 
-echo "Gross: €{$grossAmount}\n";
+// Be explicit when printing
+echo "Net: €" . $netAmount->__toString() . "\n";
+echo "VAT: €" . $vatAmount->__toString() . "\n"; 
+echo "Gross: €" . $grossAmount->__toString() . "\n";
 ```
 
 ### Custom Configuration
@@ -207,11 +212,17 @@ See the `examples/` directory for comprehensive usage examples:
 ```php
 # config/services.yaml
 services:
+    # Configure the ClientConfiguration service first, injecting the logger here
+    Netresearch\EuVatSdk\Client\ClientConfiguration:
+        factory: ['Netresearch\EuVatSdk\Client\ClientConfiguration', 'production']
+        arguments:
+            - '@?logger' # Pass the logger, if it exists
+
+    # The client service now only needs the pre-configured configuration service
     Netresearch\EuVatSdk\Client\VatRetrievalClientInterface:
         factory: ['Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory', 'create']
         arguments:
             - '@Netresearch\EuVatSdk\Client\ClientConfiguration'
-            - '@logger'
 ```
 
 ### Laravel

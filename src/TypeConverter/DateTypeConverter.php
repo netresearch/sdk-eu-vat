@@ -18,6 +18,22 @@ use Throwable;
  * and PHP DateTimeImmutable objects. It is specifically designed for xsd:date which
  * does NOT include time information.
  *
+ * IMPORTANT: Complex XML Parsing Required
+ * ------------------------------------------------------------------------
+ * Despite the WSDL defining situationOn as a simple xsd:date type, php-soap/ext-soap-engine
+ * actually passes XML fragments to TypeConverters rather than clean scalar values.
+ *
+ * This was confirmed through testing:
+ * - Expected input: "2025-01-01"
+ * - Actual input: "<situationOn xmlns=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\">"
+ *                 . "2025-01-01+01:00</situationOn>"
+ *
+ * The extractDateFromXml() and parseXmlSafely() methods are therefore ESSENTIAL for parsing
+ * these XML fragments. Removing them causes test failures and runtime errors.
+ *
+ * This behavior appears to be inherent to php-soap/ext-soap-engine's TypeConverter system
+ * when handling elements (as opposed to attributes) in SOAP responses.
+ *
  * CRITICAL: This converter uses 'Y-m-d' format (date only) as required by the EU VAT service.
  * Using 'Y-m-d\TH:i:s' format will cause immediate service failures.
  *
@@ -64,7 +80,13 @@ final class DateTypeConverter implements TypeConverterInterface
     /**
      * Convert XML date string to PHP DateTimeImmutable
      *
-     * @param string $data XML date string in YYYY-MM-DD format
+     * NOTE: This method handles BOTH plain date strings AND XML fragments.
+     * php-soap/ext-soap-engine passes XML elements like:
+     * "<situationOn xmlns=\"...\">2025-01-01+01:00</situationOn>"
+     *
+     * The extractDateFromXml() method is required to parse these fragments.
+     *
+     * @param string $data Either a plain date string (YYYY-MM-DD) OR XML fragment
      * @return DateTimeImmutable PHP date object (time set to 00:00:00)
      * @throws ParseException If the date string cannot be parsed
      *
@@ -97,8 +119,16 @@ final class DateTypeConverter implements TypeConverterInterface
     /**
      * Extract date value from XML-wrapped content
      *
-     * @param string $data Raw data that might be XML-wrapped
-     * @return string Clean date string
+     * This method is ESSENTIAL because php-soap/ext-soap-engine passes XML fragments
+     * to TypeConverters instead of clean scalar values, even for simple xsd:date types.
+     *
+     * Handles formats like:
+     * - "<situationOn xmlns=\"...\">2025-01-01+01:00</situationOn>"
+     * - "<ns1:situationOn>2024-01-15</ns1:situationOn>"
+     * - Plain strings: "2024-01-15"
+     *
+     * @param string $data Raw data that might be XML-wrapped or plain string
+     * @return string Clean date string (YYYY-MM-DD format)
      */
     private function extractDateFromXml(string $data): string
     {
