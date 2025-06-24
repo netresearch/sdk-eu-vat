@@ -33,7 +33,7 @@ composer ci                       # Run CI checks (unit tests + quality)
 
 ## Architecture Overview
 
-This is a modern PHP 8.1+ SOAP SDK for the EU VAT Retrieval Service with enterprise-grade features:
+This is a modern PHP 8.2+ SOAP SDK for the EU VAT Retrieval Service with enterprise-grade features:
 
 ### Core Components
 

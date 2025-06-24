@@ -2,6 +2,9 @@
 /vendor/
 composer.lock
 
+# Cache directories
+/var/
+
 # PHPUnit
 .phpunit.result.cache
 phpunit.xml.dist
