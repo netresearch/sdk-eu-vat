@@ -40,8 +40,8 @@ dist/
 # Logs
 *.log
 
-# Testing
-tests/fixtures/cassettes/*.yml
+# Testing  
+tests/fixtures/cassettes/*
 !tests/fixtures/cassettes/.gitkeep
 
 # Temporary files

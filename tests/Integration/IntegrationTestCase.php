@@ -101,7 +101,7 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->cassetteName = $cassetteName;
 
-        VCR::insertCassette($cassetteName);
+        VCR::insertCassette($cassetteName, $options);
     }
 
     /**
