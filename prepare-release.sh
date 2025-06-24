@@ -38,7 +38,7 @@ echo
 # Update CHANGELOG.md date
 echo "1. Updating CHANGELOG.md..."
 DATE=$(date +%Y-%m-%d)
-sed -i "s/## \[1.0.0\] - 2024-XX-XX/## [$VERSION] - $DATE/" CHANGELOG.md
+sed -i "s/## \\[1.0.0\\] - 2024-XX-XX/## \\[$VERSION\\] - $DATE/" CHANGELOG.md
 
 # Run all tests
 echo

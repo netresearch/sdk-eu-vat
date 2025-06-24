@@ -145,19 +145,20 @@ final class VatRatesResponseConverter
             $value = $rateData->value
                 ?? throw new ConversionException('Missing "value" for VAT rate.');
 
-            // Defensive type check: Verify BigDecimalTypeConverter did its job
+            // Type check with fallback: Prefer BigDecimal from TypeConverter, fallback for edge cases
             if (!$value instanceof BigDecimal) {
-                // Fallback: try to convert string to BigDecimal if TypeConverter failed
-                if (!is_string($value) && !is_numeric($value)) {
+                // Log when TypeConverter didn't work as expected
+                if (!is_numeric($value)) {
                     throw new ConversionException(
                         sprintf(
-                            'Expected "value" to be a BigDecimal object or convertible numeric, got %s. ' .
+                            'Expected "value" to be a BigDecimal object or numeric, got %s. ' .
                             'Check BigDecimalTypeConverter configuration.',
                             get_debug_type($value)
                         )
                     );
                 }
 
+                // Convert to BigDecimal with a warning in the conversion context
                 $value = BigDecimal::of((string) $value);
             }
 

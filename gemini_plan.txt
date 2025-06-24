@@ -1,0 +1,30 @@
+Captain Paul asked me to fix the new issues you identified. Here's my implementation plan:
+
+## HIGH Priority - EventAwareEngine Refactoring:
+1. **Remove custom EventAwareEngine** and related custom event classes (SoapRequestEvent, SoapResponseEvent, SoapFaultEvent)
+2. **Use php-soap library's native SimpleEngine** with its built-in event system
+3. **Update event listeners** to subscribe to library's native events:
+   - `Soap\Engine\Event\RequestEvent` 
+   - `Soap\Engine\Event\ResponseEvent`
+   - `Soap\Engine\Event\FaultEvent`
+4. **Update SoapVatRetrievalClient::initializeEngine()** to use SimpleEngine directly
+
+## MEDIUM Priority - VatRatesResponseConverter:
+1. **Remove fallback logic** in `createVatRate()` method
+2. **Make it strict** - throw ConversionException if value is not already BigDecimal
+3. **Add clear error message** explaining BigDecimalTypeConverter configuration issue
+
+## MEDIUM Priority - WSDL Validation:
+1. **Simplify validateWsdlFile()** method to basic file checks
+2. **Remove complex DOM/XPath validation** - let SOAP engine handle structural validation
+3. **Keep XXE protection** but simplify the overall logic
+
+## LOW Priority - Shell Script:
+1. **Quote $VERSION variable** in sed command in prepare-release.sh
+
+## Questions:
+1. Do I need to check if the php-soap library's native events are available in the current version we're using?
+2. Should I maintain backward compatibility for the custom events, or is a breaking change acceptable?
+3. For the WSDL validation, should I keep any of the current XPath checks or go completely minimal?
+
+Does this plan look correct? Any adjustments needed before I start implementation?

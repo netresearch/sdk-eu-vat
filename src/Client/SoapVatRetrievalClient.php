@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Client;
 
-use DOMDocument;
-use DOMXPath;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
@@ -241,71 +239,38 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     /**
      * Validate WSDL file integrity
      *
-     * Performs basic validation to ensure the WSDL file is not corrupted
-     * and contains the expected service definition.
+     * Performs basic validation to ensure the WSDL file is accessible and appears
+     * to be a valid WSDL file. The SOAP engine will perform detailed validation
+     * upon loading.
      *
      * @param string $wsdlPath Path to WSDL file to validate
      * @return boolean True if WSDL file appears valid
      */
     private function validateWsdlFile(string $wsdlPath): bool
     {
+        if (!file_exists($wsdlPath) || !is_readable($wsdlPath)) {
+            $this->logger->warning('Local WSDL file is not accessible', [
+                'wsdl_path' => $wsdlPath
+            ]);
+            return false;
+        }
+
         try {
             $content = file_get_contents($wsdlPath);
-            if ($content === false) {
-                return false;
-            }
-
-            // Load and validate XML structure with enhanced XPath validation
-            // Protect against XXE attacks by disabling external entity loading
-            $previousSetting = libxml_use_internal_errors(true);
-            $previousEntityLoader = libxml_disable_entity_loader(true);
-
-            $dom = new DOMDocument();
-            $isValid = false;
-
-            try {
-                // Load XML without LIBXML_NOENT to prevent entity substitution
-                $isValid = $dom->loadXML($content);
-            } finally {
-                // Always restore previous settings, even if an exception occurs
-                libxml_disable_entity_loader($previousEntityLoader);
-            }
-
-            if (!$isValid) {
-                $this->logger->warning('WSDL file is not well-formed XML', [
+            if ($content === false || trim($content) === '') {
+                $this->logger->warning('Local WSDL file is empty or unreadable', [
                     'wsdl_path' => $wsdlPath
                 ]);
-                libxml_use_internal_errors($previousSetting);
                 return false;
             }
 
-            // Enhanced validation using XPath to check for required WSDL elements
-            $xpath = new DOMXPath($dom);
-            $xpath->registerNamespace('wsdl', 'http://schemas.xmlsoap.org/wsdl/');
-            $xpath->registerNamespace('soap', 'http://schemas.xmlsoap.org/wsdl/soap/');
-
-            // Check for required WSDL structure
-            $requiredElements = [
-                '//wsdl:definitions' => 'WSDL definitions element',
-                '//wsdl:service[@name="vatRetrievalServiceService"]' => 'vatRetrievalServiceService service definition',
-                '//wsdl:portType[@name="vatRetrievalService"]' => 'vatRetrievalService interface',
-                '//wsdl:operation[@name="retrieveVatRates"]' => 'retrieveVatRates operation'
-            ];
-
-            foreach ($requiredElements as $xpathQuery => $description) {
-                $nodes = $xpath->query($xpathQuery);
-                if (!$nodes || $nodes->length === 0) {
-                    $this->logger->warning('WSDL validation failed: missing required element', [
-                        'wsdl_path' => $wsdlPath,
-                        'missing_element' => $description,
-                        'xpath_query' => $xpathQuery
-                    ]);
-                    libxml_use_internal_errors($previousSetting);
-                    return false;
-                }
+            // Basic check for WSDL content - the SOAP engine will do thorough validation
+            if (!str_contains($content, 'wsdl:definitions')) {
+                $this->logger->warning('Local WSDL file appears to be invalid or not a WSDL file', [
+                    'wsdl_path' => $wsdlPath
+                ]);
+                return false;
             }
-
-            libxml_use_internal_errors($previousSetting);
 
             return true;
         } catch (\Throwable $e) {
