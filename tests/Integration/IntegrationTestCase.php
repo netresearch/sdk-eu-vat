@@ -101,7 +101,13 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->cassetteName = $cassetteName;
 
-        VCR::insertCassette($cassetteName, $options);
+        // Configure VCR options if provided
+        if ($options !== []) {
+            VCR::configure()
+                ->setMode($options['record'] ?? 'once');
+        }
+
+        VCR::insertCassette($cassetteName);
     }
 
     /**
