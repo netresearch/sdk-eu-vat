@@ -42,13 +42,13 @@ jobs:
         run: composer install --no-progress --prefer-dist --optimize-autoloader
         
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --no-progress --error-format=github
+        run: vendor/bin/phpstan analyse --no-progress
         
       - name: Run PHP_CodeSniffer
-        run: vendor/bin/phpcs --report=github
+        run: vendor/bin/phpcs
         
       - name: Run PHPMD
-        run: vendor/bin/phpmd src,tests github phpmd.xml
+        run: vendor/bin/phpmd src text phpmd.xml
         
         
   tests:
@@ -110,11 +110,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Install Symfony CLI
-        run: wget https://get.symfony.com/cli/installer -O - | bash
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: soap, libxml
+          tools: composer:v2
+          
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
         
       - name: Run security checker
-        run: /home/runner/.symfony5/bin/symfony security:check
+        run: composer audit
         
   rector:
     name: Rector Checks
