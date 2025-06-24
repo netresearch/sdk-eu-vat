@@ -66,7 +66,7 @@ if (!file_exists($composerPath)) {
         // Check dependencies
         if (isset($composerJson['require'])) {
             $expectedDeps = [
-                'php' => '^8.1',
+                'php' => '^8.2',
                 'ext-soap' => '*',
                 'ext-libxml' => '*',
                 'brick/math' => '^0.12',

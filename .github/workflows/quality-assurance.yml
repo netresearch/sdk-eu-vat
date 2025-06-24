@@ -13,7 +13,7 @@ jobs:
     
     strategy:
       matrix:
-        php-version: ['8.1', '8.2', '8.3']
+        php-version: ['8.2', '8.3']
     
     steps:
       - name: Checkout code
@@ -57,7 +57,7 @@ jobs:
     
     strategy:
       matrix:
-        php-version: ['8.1', '8.2', '8.3']
+        php-version: ['8.2', '8.3']
         
     steps:
       - name: Checkout code
@@ -95,7 +95,7 @@ jobs:
           REFRESH_CASSETTES: false
           
       - name: Upload coverage to Codecov
-        if: matrix.php-version == '8.1'
+        if: matrix.php-version == '8.2'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
@@ -127,7 +127,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: '8.2'
           extensions: soap, libxml
           tools: composer:v2
           
@@ -148,7 +148,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: '8.2'
           extensions: soap, libxml
           tools: composer:v2
           

@@ -10,12 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - No unreleased changes yet
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2025-06-24
 
 ### Added
 - Initial release of EU VAT SOAP SDK
 - Complete implementation of EU VAT Retrieval Service integration
-- PHP 8.1+ support with modern language features
+- PHP 8.2+ support with modern language features
 - Financial-grade precision using BigDecimal for VAT calculations
 - Core VAT rate retrieval functionality
 - Support for all EU member states
@@ -70,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Quality Assurance
 - PHPStan level 8 static analysis
 - PHP_CodeSniffer PSR-12 compliance
-- Rector for PHP 8.1+ modernization
+- Rector for PHP 8.2+ modernization
 - PHPMD complexity analysis
 - GitHub Actions CI/CD pipeline
 - 95%+ test coverage

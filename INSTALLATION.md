@@ -1,18 +1,6 @@
-# Installation Guide
+# Installation Troubleshooting
 
-## Requirements
-
-- PHP 8.1 or higher
-- `ext-soap` PHP extension
-- `ext-libxml` PHP extension
-
-## 1. Install via Composer
-
-```bash
-composer require netresearch/sdk-eu-vat
-```
-
-## 2. Install Required PHP Extensions
+## Installing Required PHP Extensions
 
 This SDK requires the `soap` and `libxml` PHP extensions.
 
@@ -20,10 +8,10 @@ This SDK requires the `soap` and `libxml` PHP extensions.
 
 ```bash
 sudo apt-get update
-sudo apt-get install php8.1-soap php8.1-xml
-
-# For PHP 8.2 or 8.3, adjust the version number accordingly
 sudo apt-get install php8.2-soap php8.2-xml
+
+# For PHP 8.3, adjust the version number accordingly
+sudo apt-get install php8.3-soap php8.3-xml
 ```
 
 ### CentOS/RHEL/Fedora
@@ -39,16 +27,16 @@ sudo yum install php-soap php-xml
 ### Alpine Linux
 
 ```bash
-apk add php81-soap php81-xml
-
-# For PHP 8.2 or 8.3, adjust the version number accordingly
 apk add php82-soap php82-xml
+
+# For PHP 8.3, adjust the version number accordingly
+apk add php83-soap php83-xml
 ```
 
 ### macOS (Homebrew)
 
 ```bash
-brew install php@8.1
+brew install php@8.2
 
 # Extensions are usually included, but verify they're enabled
 php -m | grep -E '(soap|libxml)'
@@ -64,7 +52,7 @@ php -m | grep -E '(soap|libxml)'
    ```
 3. Restart your web server
 
-## 3. Verify Installation
+## Verifying Extension Installation
 
 Check that the extensions are properly installed:
 
@@ -75,33 +63,7 @@ php -m | grep libxml
 
 Both commands should return the extension name if properly installed.
 
-## 4. Quick Test
-
-Create a simple test script to verify everything is working:
-
-```php
-<?php
-
-require_once 'vendor/autoload.php';
-
-use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
-use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
-
-try {
-    $client = VatRetrievalClientFactory::create();
-    echo "✓ SDK successfully installed and configured\n";
-    
-    // Optional: Test with a simple request
-    $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-    $response = $client->retrieveVatRates($request);
-    echo "✓ Successfully connected to EU VAT service\n";
-    
-} catch (\Exception $e) {
-    echo "✗ Installation error: " . $e->getMessage() . "\n";
-}
-```
-
-## Troubleshooting
+## Common Installation Issues
 
 ### "Class 'SoapClient' not found"
 
@@ -133,6 +95,10 @@ composer config --global http-proxy http://proxy.company.com:8080
 composer config --global https-proxy https://proxy.company.com:8080
 ```
 
-## Next Steps
+## Still Having Issues?
 
-Once installation is complete, see the [README.md](README.md) for usage examples and configuration options.
+If you continue to experience installation problems after following this guide, please:
+
+1. Check that your PHP version is 8.2 or higher: `php -v`
+2. Verify all required extensions are loaded: `php -m | grep -E '(soap|libxml)'`
+3. Review the [README.md](README.md) for usage examples once installation is complete

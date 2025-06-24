@@ -5,7 +5,7 @@
 [![Latest Stable Version](https://poser.pugx.org/netresearch/sdk-eu-vat/v/stable)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 [![License](https://poser.pugx.org/netresearch/sdk-eu-vat/license)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 
-A modern PHP 8.1+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states with precision financial calculations.
+A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states with precision financial calculations.
 
 ## Features
 
@@ -17,23 +17,15 @@ A modern PHP 8.1+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/ta
 - 🚀 **Performance**: Optimized with WSDL caching and connection pooling support
 - 📖 **Well Documented**: Comprehensive PHPDoc and usage examples
 
-## Requirements
-
-- PHP 8.1 or higher
-- ext-soap
-- ext-libxml
-
 ## Installation
-
-Install via Composer:
 
 ```bash
 composer require netresearch/sdk-eu-vat
 ```
 
-**Requirements:** PHP 8.1+, `ext-soap` and `ext-libxml` extensions
+**Requirements:** PHP 8.2+, `ext-soap` and `ext-libxml` extensions
 
-📖 **Need help installing dependencies?** See the detailed [Installation Guide](INSTALLATION.md) for platform-specific instructions.
+💡 **Having installation issues?** See the [Installation Guide](INSTALLATION.md) for troubleshooting help.
 
 ## Quick Start
 
@@ -316,7 +308,7 @@ composer audit
 
 ### Development Requirements
 
-- PHP 8.1+
+- PHP 8.2+
 - Composer 2.0+
 - All quality tools must pass (PHPStan level 8, PHPCS PSR-12)
 
