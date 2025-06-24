@@ -113,7 +113,7 @@ abstract class IntegrationTestCase extends TestCase
      */
     protected function recordCassette(string $cassetteName): void
     {
-        $this->insertCassette($cassetteName, ['record' => 'all']);
+        $this->insertCassette($cassetteName, ['record' => 'new_episodes']);
     }
 
     /**

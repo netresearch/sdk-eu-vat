@@ -29,13 +29,6 @@ VCR::configure()
     // Configure request matching rules
     ->enableRequestMatchers(['method', 'url', 'body'])
 
-    // Set up whitelist for allowed requests
-    ->setWhiteList([
-        'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService',
-        'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC',
-        'https://ec.europa.eu/taxation_customs/tedb/ws-test/VatRetrievalService',
-    ])
-
     // Configure SOAP-specific settings
     ->addRequestMatcher(
         'soap_action',
@@ -45,7 +38,7 @@ VCR::configure()
             $action2 = $request2->getHeader('SOAPAction')[0] ?? '';
             return $action1 === $action2;
         }
-    );
-
-// Enable library hooks for SOAP recording
-VCR::configure()->enableLibraryHooks(['curl', 'soap']);
+    )
+    
+    // Enable library hooks for SOAP and cURL recording
+    ->enableLibraryHooks(['curl', 'soap']);
