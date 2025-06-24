@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - No unreleased changes yet
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2025-06-24
 
 ### Added
 - Initial release of EU VAT SOAP SDK
