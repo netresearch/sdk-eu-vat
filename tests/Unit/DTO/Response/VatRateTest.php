@@ -190,7 +190,7 @@ class VatRateTest extends TestCase
             'ZERO' => 'isZeroRate',
             'E' => 'isExempt',
             'EXEMPT' => 'isExempt',
-            
+
             // New mappings added to fix issue #7
             'SUPER_REDUCED_RATE' => 'isSuperReduced',
             'PARKING_RATE' => 'isParkingRate',
@@ -201,7 +201,7 @@ class VatRateTest extends TestCase
 
         foreach ($testCases as $rateType => $expectedMethod) {
             $rate = new VatRate($rateType, '0.0');
-            
+
             // Ensure the rate maps to exactly one category
             $mappings = [
                 'isStandard' => $rate->isStandard(),
@@ -211,15 +211,20 @@ class VatRateTest extends TestCase
                 'isZeroRate' => $rate->isZeroRate(),
                 'isExempt' => $rate->isExempt(),
             ];
-            
+
             $trueMappings = array_keys(array_filter($mappings));
-            
-            $this->assertContains($expectedMethod, $trueMappings, 
-                "Rate type '{$rateType}' should map to {$expectedMethod}");
-            
+
+            $this->assertContains(
+                $expectedMethod,
+                $trueMappings,
+                "Rate type '{$rateType}' should map to {$expectedMethod}"
+            );
+
             // Ensure it maps to at least one category (no unmapped rates)
-            $this->assertNotEmpty($trueMappings, 
-                "Rate type '{$rateType}' must map to at least one category");
+            $this->assertNotEmpty(
+                $trueMappings,
+                "Rate type '{$rateType}' must map to at least one category"
+            );
         }
     }
 }

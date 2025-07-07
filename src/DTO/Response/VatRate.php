@@ -199,7 +199,7 @@ final class VatRate implements \Stringable
     public function isExempt(): bool
     {
         $normalizedType = $this->getType();
-        return $normalizedType === 'E' || $normalizedType === 'EXEMPT' || $normalizedType === 'EXEMPTED' || 
+        return $normalizedType === 'E' || $normalizedType === 'EXEMPT' || $normalizedType === 'EXEMPTED' ||
                $normalizedType === 'NOT_APPLICABLE' || $normalizedType === 'OUT_OF_SCOPE';
     }
 
