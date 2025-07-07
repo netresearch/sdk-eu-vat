@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - No unreleased changes yet
 
+## [1.0.1] - 2025-07-07
+
+### Fixed
+- VatRate mapping for unmapped rate types to handle edge cases properly
+
+### Changed
+- Updated GitHub Actions cache action to v4 for improved CI performance
+
+### Added
+- Renovate configuration for automated dependency updates
+
 ## [1.0.0] - 2025-06-24
 
 ### Added
