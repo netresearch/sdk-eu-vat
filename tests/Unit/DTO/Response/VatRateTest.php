@@ -61,6 +61,18 @@ class VatRateTest extends TestCase
         $this->assertFalse($rate->isReduced());
     }
 
+    public function testSuperReducedRateWithFullName(): void
+    {
+        $rate = new VatRate('SUPER_REDUCED_RATE', '4.0');
+
+        $this->assertTrue($rate->isSuperReduced());
+        $this->assertFalse($rate->isReduced());
+        $this->assertFalse($rate->isStandard());
+        $this->assertFalse($rate->isParkingRate());
+        $this->assertFalse($rate->isZeroRate());
+        $this->assertFalse($rate->isExempt());
+    }
+
     public function testParkingRates(): void
     {
         $rate1 = new VatRate('PK', '12.0');
@@ -68,6 +80,14 @@ class VatRateTest extends TestCase
 
         $rate2 = new VatRate('PARKING', '12.0');
         $this->assertTrue($rate2->isParkingRate());
+
+        $rate3 = new VatRate('PARKING_RATE', '14.0');
+        $this->assertTrue($rate3->isParkingRate());
+        $this->assertFalse($rate3->isStandard());
+        $this->assertFalse($rate3->isReduced());
+        $this->assertFalse($rate3->isSuperReduced());
+        $this->assertFalse($rate3->isZeroRate());
+        $this->assertFalse($rate3->isExempt());
     }
 
     public function testZeroRates(): void
@@ -86,6 +106,25 @@ class VatRateTest extends TestCase
 
         $rate2 = new VatRate('EXEMPT', '0.0');
         $this->assertTrue($rate2->isExempt());
+
+        $rate3 = new VatRate('EXEMPTED', '0.0');
+        $this->assertTrue($rate3->isExempt());
+
+        $rate4 = new VatRate('NOT_APPLICABLE', '0.0');
+        $this->assertTrue($rate4->isExempt());
+        $this->assertFalse($rate4->isStandard());
+        $this->assertFalse($rate4->isReduced());
+        $this->assertFalse($rate4->isSuperReduced());
+        $this->assertFalse($rate4->isParkingRate());
+        $this->assertFalse($rate4->isZeroRate());
+
+        $rate5 = new VatRate('OUT_OF_SCOPE', '0.0');
+        $this->assertTrue($rate5->isExempt());
+        $this->assertFalse($rate5->isStandard());
+        $this->assertFalse($rate5->isReduced());
+        $this->assertFalse($rate5->isSuperReduced());
+        $this->assertFalse($rate5->isParkingRate());
+        $this->assertFalse($rate5->isZeroRate());
     }
 
     public function testNormalizesTypeToUppercase(): void
@@ -129,5 +168,58 @@ class VatRateTest extends TestCase
 
         $this->assertEquals('19.0', (string) $rate);
         $this->assertEquals($rate->getValue(), (string) $rate);
+    }
+
+    /**
+     * Test that all known rate types from EU VAT service can be mapped to a category
+     * This addresses GitHub issue #7 where some rate types were unmapped
+     */
+    public function testAllKnownRateTypesAreMappable(): void
+    {
+        $testCases = [
+            // Original mappings
+            'DEFAULT' => 'isStandard',
+            'STANDARD' => 'isStandard',
+            'REDUCED' => 'isReduced',
+            'REDUCED[1]' => 'isReduced',
+            'REDUCED_RATE' => 'isReduced',
+            'SUPER_REDUCED' => 'isSuperReduced',
+            'PK' => 'isParkingRate',
+            'PARKING' => 'isParkingRate',
+            'Z' => 'isZeroRate',
+            'ZERO' => 'isZeroRate',
+            'E' => 'isExempt',
+            'EXEMPT' => 'isExempt',
+            
+            // New mappings added to fix issue #7
+            'SUPER_REDUCED_RATE' => 'isSuperReduced',
+            'PARKING_RATE' => 'isParkingRate',
+            'EXEMPTED' => 'isExempt',
+            'NOT_APPLICABLE' => 'isExempt',
+            'OUT_OF_SCOPE' => 'isExempt',
+        ];
+
+        foreach ($testCases as $rateType => $expectedMethod) {
+            $rate = new VatRate($rateType, '0.0');
+            
+            // Ensure the rate maps to exactly one category
+            $mappings = [
+                'isStandard' => $rate->isStandard(),
+                'isReduced' => $rate->isReduced(),
+                'isSuperReduced' => $rate->isSuperReduced(),
+                'isParkingRate' => $rate->isParkingRate(),
+                'isZeroRate' => $rate->isZeroRate(),
+                'isExempt' => $rate->isExempt(),
+            ];
+            
+            $trueMappings = array_keys(array_filter($mappings));
+            
+            $this->assertContains($expectedMethod, $trueMappings, 
+                "Rate type '{$rateType}' should map to {$expectedMethod}");
+            
+            // Ensure it maps to at least one category (no unmapped rates)
+            $this->assertNotEmpty($trueMappings, 
+                "Rate type '{$rateType}' must map to at least one category");
+        }
     }
 }

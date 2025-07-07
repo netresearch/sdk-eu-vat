@@ -161,22 +161,23 @@ final class VatRate implements \Stringable
     /**
      * Check if this is a super-reduced VAT rate
      *
-     * @return boolean True if the rate type is 'SUPER_REDUCED'
+     * @return boolean True if the rate type is 'SUPER_REDUCED' or 'SUPER_REDUCED_RATE'
      */
     public function isSuperReduced(): bool
     {
-        return $this->getType() === 'SUPER_REDUCED';
+        $normalizedType = $this->getType();
+        return $normalizedType === 'SUPER_REDUCED' || $normalizedType === 'SUPER_REDUCED_RATE';
     }
 
     /**
      * Check if this is a parking rate
      *
-     * @return boolean True if the rate type is 'PK' or 'PARKING'
+     * @return boolean True if the rate type is 'PK', 'PARKING', or 'PARKING_RATE'
      */
     public function isParkingRate(): bool
     {
         $normalizedType = $this->getType();
-        return $normalizedType === 'PK' || $normalizedType === 'PARKING';
+        return $normalizedType === 'PK' || $normalizedType === 'PARKING' || $normalizedType === 'PARKING_RATE';
     }
 
     /**
@@ -193,12 +194,13 @@ final class VatRate implements \Stringable
     /**
      * Check if this is an exempt rate
      *
-     * @return boolean True if the rate type is 'E' or 'EXEMPT'
+     * @return boolean True if the rate type is 'E', 'EXEMPT', 'EXEMPTED', 'NOT_APPLICABLE', or 'OUT_OF_SCOPE'
      */
     public function isExempt(): bool
     {
         $normalizedType = $this->getType();
-        return $normalizedType === 'E' || $normalizedType === 'EXEMPT';
+        return $normalizedType === 'E' || $normalizedType === 'EXEMPT' || $normalizedType === 'EXEMPTED' || 
+               $normalizedType === 'NOT_APPLICABLE' || $normalizedType === 'OUT_OF_SCOPE';
     }
 
     /**
