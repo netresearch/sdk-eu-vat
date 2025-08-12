@@ -1,1 +1,74 @@
-[]
+[{
+    "request": {
+        "method": "POST",
+        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService",
+        "headers": {
+            "Host": "ec.europa.eu",
+            "Content-Type": "text\/xml; charset=utf-8",
+            "SOAPAction": "urn:ec.europa.eu:taxud:tedb:services:v1:VatRetrievalService\/RetrieveVatRates"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\" xmlns:ns1=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><SOAP-ENV:Body><ns2:retrieveVatRatesReqMsg><ns1:memberStates><ns1:isoCode>XX<\/ns1:isoCode><ns1:isoCode>YY<\/ns1:isoCode><\/ns1:memberStates><ns1:situationOn\/><\/ns2:retrieveVatRatesReqMsg><\/SOAP-ENV:Body><\/SOAP-ENV:Envelope>\n"
+    },
+    "response": {
+        "status": {
+            "code": 500,
+            "message": "Internal Server Error"
+        },
+        "headers": {
+            "Date": "Tue, 12 Aug 2025 11:26:27 GMT",
+            "Content-Length": "705",
+            "Content-Type": "text\/xml; charset=UTF-8",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Accept": "text\/xml",
+            "SOAPAction": "\"\"",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Origin": "http:\/\/localhost:4200",
+            "Server": "Europa",
+            "Connection": "keep-alive"
+        },
+        "body": "<env:Envelope xmlns:env=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\"><env:Header\/><env:Body><env:Fault><faultcode>env:Client<\/faultcode><faultstring>TEDB-ERR-2 - Request is not valid<\/faultstring><detail><ns2:retrieveVatRatesFaultMsg xmlns:ns0=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><ns0:error><ns0:code>00002<\/ns0:code><ns0:description>The Member State \"XX\" does not exist.<\/ns0:description><\/ns0:error><ns0:error><ns0:code>00002<\/ns0:code><ns0:description>The Member State \"YY\" does not exist.<\/ns0:description><\/ns0:error><\/ns2:retrieveVatRatesFaultMsg><\/detail><\/env:Fault><\/env:Body><\/env:Envelope>",
+        "curl_info": {
+            "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService",
+            "content_type": "text\/xml; charset=UTF-8",
+            "http_code": 500,
+            "header_size": 350,
+            "request_size": 737,
+            "filetime": -1,
+            "ssl_verify_result": 0,
+            "redirect_count": 0,
+            "total_time": 0.135993,
+            "namelookup_time": 0.001139,
+            "connect_time": 0.001233,
+            "pretransfer_time": 0.059758,
+            "size_upload": 491,
+            "size_download": 705,
+            "speed_download": 5184,
+            "speed_upload": 3610,
+            "download_content_length": 705,
+            "upload_content_length": 491,
+            "starttransfer_time": 0.135964,
+            "redirect_time": 0,
+            "redirect_url": "",
+            "primary_ip": "2a01:7080:24:100::666:30",
+            "certinfo": [],
+            "primary_port": 443,
+            "local_ip": "2003:a:1447:5c01:2fbf:6966:147b:fd69",
+            "local_port": 42786,
+            "http_version": 2,
+            "protocol": 2,
+            "ssl_verifyresult": 0,
+            "scheme": "HTTPS",
+            "appconnect_time_us": 59713,
+            "connect_time_us": 1233,
+            "namelookup_time_us": 1139,
+            "pretransfer_time_us": 59758,
+            "redirect_time_us": 0,
+            "starttransfer_time_us": 135964,
+            "total_time_us": 135993,
+            "effective_method": "POST",
+            "capath": "\/etc\/ssl\/certs",
+            "cainfo": "\/etc\/ssl\/certs\/ca-certificates.crt"
+        }
+    },
+    "index": 0
+}]
