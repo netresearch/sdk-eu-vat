@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - No unreleased changes yet
 
+## [1.1.0] - 2025-08-12
+
+### Changed
+- Widened brick/math dependency constraint to support versions 0.11 and 0.12 for better Oro Commerce compatibility
+- Widened psr/log dependency constraint to support versions 1.x, 2.x, and 3.x for broader framework compatibility
+- Updated monolog dev dependency to support versions 2.10+ and 3.x
+
+### Fixed
+- Fixed PSR-3 LoggerInterface compatibility issue in security review tests
+- Refreshed all VCR cassettes for reliable integration testing
+
 ## [1.0.1] - 2025-07-07
 
 ### Fixed
