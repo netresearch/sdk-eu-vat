@@ -3,12 +3,18 @@
     "description": "PHP SDK for EU VAT Retrieval Service SOAP API",
     "type": "library",
     "license": "MIT",
-    "keywords": ["eu", "vat", "soap", "tax", "api", "netresearch"],
+    "keywords": [
+        "eu",
+        "vat",
+        "soap",
+        "tax",
+        "api",
+        "netresearch"
+    ],
     "homepage": "https://github.com/netresearch/sdk-eu-vat",
     "authors": [
         {
-            "name": "Netresearch DTT GmbH",
-            "email": "info@netresearch.de"
+            "name": "Netresearch DTT GmbH"
         }
     ],
     "require": {
@@ -69,5 +75,9 @@
             "@test:unit",
             "@quality"
         ]
+    },
+    "support": {
+        "issues": "https://github.com/netresearch/sdk-eu-vat/issues",
+        "source": "https://github.com/netresearch/sdk-eu-vat"
     }
 }

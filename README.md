@@ -320,7 +320,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: Full API documentation available in the `docs/` directory
 - **Issues**: Report bugs and feature requests on [GitHub Issues](https://github.com/netresearch/sdk-eu-vat/issues)
-- **Security**: Report security vulnerabilities to security@netresearch.de
+- **Security**: Report security vulnerabilities via [GitHub Security Advisories](https://github.com/netresearch/sdk-eu-vat/security/advisories/new)
 
 ## Changelog
 
