@@ -49,6 +49,9 @@
     },
     "config": {
         "sort-packages": true,
+        "audit": {
+            "abandoned": "report"
+        },
         "allow-plugins": {
             "php-http/discovery": true,
             "dealerdirect/phpcodesniffer-composer-installer": true
