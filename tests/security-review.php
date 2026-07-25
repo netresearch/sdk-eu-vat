@@ -246,6 +246,9 @@ $testLogger = new class extends AbstractLogger {
     /** @var array<string> */
     private array $messages = [];
 
+    /**
+     * @param string|\Stringable $message
+     */
     public function log($level, $message, array $context = []): void
     {
         $this->messages[] = "[{$level}] {$message} " . json_encode($context);
