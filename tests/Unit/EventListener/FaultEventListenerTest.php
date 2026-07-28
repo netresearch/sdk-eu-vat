@@ -11,12 +11,30 @@ use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use SoapFault;
+use stdClass;
 
 /**
  * Test FaultEventListener SOAP fault mapping
+ *
+ * The fixtures in this class mirror the fault the TEDB service actually sends,
+ * taken verbatim from tests/fixtures/cassettes/error-invalid-country-code:
+ *
+ * ```xml
+ * <faultcode>env:Client</faultcode>
+ * <faultstring>TEDB-ERR-2 - Request is not valid</faultstring>
+ * <detail><ns2:retrieveVatRatesFaultMsg><ns0:error>
+ *   <ns0:code>00002</ns0:code>
+ *   <ns0:description>The Member State "XX" does not exist.</ns0:description>
+ * </ns0:error>…</ns2:retrieveVatRatesFaultMsg></detail>
+ * ```
  */
 class FaultEventListenerTest extends TestCase
 {
+    /**
+     * Fault string exactly as recorded from the service
+     */
+    private const REAL_FAULT_STRING = 'TEDB-ERR-2 - Request is not valid';
+
     private LoggerInterface $logger;
     private FaultEventListener $listener;
 
@@ -26,62 +44,167 @@ class FaultEventListenerTest extends TestCase
         $this->listener = new FaultEventListener($this->logger);
     }
 
-    public function testHandleTedb100FaultMapsToInvalidRequestException(): void
+    /**
+     * Build the decoded fault detail as ext-soap hands it to the listener
+     *
+     * @param array<int, array{code: string, description: string}> $errors Error entries.
+     */
+    private function createFaultDetail(array $errors): stdClass
     {
-        $fault = new SoapFault('TEDB-100', 'Invalid date format');
+        $decodedErrors = [];
+        foreach ($errors as $error) {
+            $decodedErrors[] = (object) $error;
+        }
+
+        $faultMsg = new stdClass();
+        // ext-soap collapses a single repeated element into the object itself
+        $faultMsg->error = count($decodedErrors) === 1 ? $decodedErrors[0] : $decodedErrors;
+
+        $detail = new stdClass();
+        $detail->retrieveVatRatesFaultMsg = $faultMsg;
+
+        return $detail;
+    }
+
+    /**
+     * Build the fault recorded for an invalid member state request
+     */
+    private function createRealClientFault(): SoapFault
+    {
+        $fault = new SoapFault('env:Client', self::REAL_FAULT_STRING);
+        $fault->detail = $this->createFaultDetail([
+            ['code' => '00002', 'description' => 'The Member State "XX" does not exist.'],
+            ['code' => '00002', 'description' => 'The Member State "YY" does not exist.'],
+        ]);
+
+        return $fault;
+    }
+
+    public function testRecordedClientFaultMapsToInvalidRequestException(): void
+    {
+        $fault = $this->createRealClientFault();
 
         $this->logger->expects($this->once())
             ->method('error')
             ->with(
                 'SOAP Fault received from EU VAT service',
-                $this->callback(fn($context): bool => $context['fault_code'] === 'TEDB-100'
-                    && $context['fault_string'] === 'Invalid date format')
+                $this->callback(fn($context): bool => $context['fault_code'] === 'env:Client'
+                    && $context['fault_string'] === self::REAL_FAULT_STRING)
             );
 
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected InvalidRequestException');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
+            $this->assertStringContainsString(self::REAL_FAULT_STRING, $e->getMessage());
+            $this->assertStringContainsString('[00002] The Member State "XX" does not exist.', $e->getMessage());
+            $this->assertStringContainsString('[00002] The Member State "YY" does not exist.', $e->getMessage());
+        }
+    }
+
+    public function testRecordedClientFaultWithSingleErrorDetail(): void
+    {
+        $fault = new SoapFault('env:Client', self::REAL_FAULT_STRING);
+        $fault->detail = $this->createFaultDetail([
+            ['code' => '00002', 'description' => 'The Member State "US" does not exist.'],
+        ]);
+
         $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid date format provided (TEDB-100): Invalid date format');
+        $this->expectExceptionMessage('[00002] The Member State "US" does not exist.');
 
         $this->listener->handleSoapFault($fault);
     }
 
-    public function testHandleTedb101FaultMapsToInvalidRequestException(): void
+    public function testBareClientFaultCodeMapsToInvalidRequestException(): void
+    {
+        $fault = new SoapFault('Client', self::REAL_FAULT_STRING);
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage('Invalid request rejected by the EU VAT service (TEDB-ERR-2)');
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    public function testSoap12SenderFaultCodeMapsToInvalidRequestException(): void
+    {
+        $fault = new SoapFault('env:Sender', self::REAL_FAULT_STRING);
+
+        $this->expectException(InvalidRequestException::class);
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    public function testServerFaultCodeMapsToServiceUnavailableException(): void
+    {
+        $fault = new SoapFault('env:Server', 'TEDB-ERR-9 - Internal error');
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected ServiceUnavailableException');
+        } catch (ServiceUnavailableException $e) {
+            $this->assertSame('TEDB-ERR-9', $e->getErrorCode());
+            $this->assertStringContainsString('Internal error in the EU VAT service', $e->getMessage());
+        }
+    }
+
+    public function testSoap12ReceiverFaultCodeMapsToServiceUnavailableException(): void
+    {
+        $fault = new SoapFault('env:Receiver', 'Service temporarily unavailable');
+
+        $this->expectException(ServiceUnavailableException::class);
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    public function testUnrecognisedFaultCodeMapsToSoapFaultException(): void
+    {
+        $fault = new SoapFault('env:VersionMismatch', 'Unsupported SOAP version');
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected SoapFaultException');
+        } catch (SoapFaultException $e) {
+            $this->assertSame('env:VersionMismatch', $e->getFaultCode());
+            $this->assertSame('Unsupported SOAP version', $e->getFaultString());
+            $this->assertStringContainsString(
+                'SOAP fault occurred (env:VersionMismatch): Unsupported SOAP version',
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * A TEDB identifier alone must not be treated as a classification signal
+     *
+     * The legacy mapping keyed on fault codes such as TEDB-101, which the service
+     * never sends. Such a code carries no client/server attribution, so it has to
+     * fall through to the generic SOAP fault exception.
+     */
+    public function testLegacyTedbFaultCodeIsNotClassified(): void
     {
         $fault = new SoapFault('TEDB-101', 'Invalid country code');
 
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101): Invalid country code');
-
-        $this->listener->handleSoapFault($fault);
-    }
-
-    public function testHandleTedb102FaultMapsToInvalidRequestException(): void
-    {
-        $fault = new SoapFault('TEDB-102', 'Empty member states array');
-
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Empty member states array provided (TEDB-102): Empty member states array');
-
-        $this->listener->handleSoapFault($fault);
-    }
-
-    public function testHandleTedb400FaultMapsToServiceUnavailableException(): void
-    {
-        $fault = new SoapFault('TEDB-400', 'Internal server error');
-
-        $this->expectException(ServiceUnavailableException::class);
-        $this->expectExceptionMessage('Internal application error in EU VAT service (TEDB-400): Internal server error');
-
-        $this->listener->handleSoapFault($fault);
-    }
-
-    public function testHandleUnknownFaultMapsToSoapFaultException(): void
-    {
-        $fault = new SoapFault('UNKNOWN-500', 'Unknown error');
-
         $this->expectException(SoapFaultException::class);
-        $this->expectExceptionMessage('SOAP fault occurred (UNKNOWN-500): Unknown error');
+        $this->expectExceptionMessage('SOAP fault occurred (TEDB-101): Invalid country code');
 
         $this->listener->handleSoapFault($fault);
+    }
+
+    public function testFaultStringWithoutTedbCodeFallsBackToFaultCode(): void
+    {
+        $fault = new SoapFault('env:Client', 'Request is not valid');
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected InvalidRequestException');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('env:Client', $e->getErrorCode());
+            $this->assertStringContainsString(
+                'Invalid request rejected by the EU VAT service (env:Client): Request is not valid',
+                $e->getMessage()
+            );
+        }
     }
 
     public function testHandleFaultWithoutFaultCodeUsesDefault(): void
@@ -98,29 +221,64 @@ class FaultEventListenerTest extends TestCase
 
     public function testHandleFaultWithoutFaultStringUsesDefault(): void
     {
-        $fault = new SoapFault('TEDB-100', '');
+        $fault = new SoapFault('env:Client', '');
         // Unset faultstring to test fallback
         unset($fault->faultstring);
 
         $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid date format provided (TEDB-100): No fault string provided');
+        $this->expectExceptionMessage(
+            'Invalid request rejected by the EU VAT service (env:Client): No fault string provided'
+        );
 
         $this->listener->handleSoapFault($fault);
     }
 
     public function testHandleFaultWithDetailLogsDetail(): void
     {
-        $fault = new SoapFault('TEDB-100', 'Invalid date');
-        $fault->detail = 'Additional error information';
+        $fault = $this->createRealClientFault();
+        $detail = $fault->detail;
 
         $this->logger->expects($this->once())
             ->method('error')
             ->with(
                 'SOAP Fault received from EU VAT service',
-                $this->callback(
-                    fn($context): bool => $context['fault_detail'] === 'Additional error information'
-                )
+                $this->callback(fn($context): bool => $context['fault_detail'] === $detail)
             );
+
+        $this->expectException(InvalidRequestException::class);
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * An unexpected detail shape must not break fault mapping
+     */
+    public function testUnparsableDetailIsIgnoredInMessage(): void
+    {
+        $fault = new SoapFault('env:Client', self::REAL_FAULT_STRING);
+        $fault->detail = 'a plain string the service never sends';
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected InvalidRequestException');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame(
+                'Invalid request rejected by the EU VAT service (TEDB-ERR-2): ' . self::REAL_FAULT_STRING,
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * A self-referencing detail must not send the collector into infinite recursion
+     */
+    public function testRecursiveDetailIsBounded(): void
+    {
+        $node = new stdClass();
+        $node->child = $node;
+
+        $fault = new SoapFault('env:Client', self::REAL_FAULT_STRING);
+        $fault->detail = $node;
 
         $this->expectException(InvalidRequestException::class);
 
@@ -129,7 +287,7 @@ class FaultEventListenerTest extends TestCase
 
     public function testHandleFaultPreservesOriginalFaultAsPrevious(): void
     {
-        $fault = new SoapFault('TEDB-100', 'Test error');
+        $fault = $this->createRealClientFault();
 
         try {
             $this->listener->handleSoapFault($fault);
@@ -141,18 +299,21 @@ class FaultEventListenerTest extends TestCase
 
     public function testIsClientValidationErrorIdentifiesClientErrors(): void
     {
-        $this->assertTrue($this->listener->isClientValidationError('TEDB-100'));
-        $this->assertTrue($this->listener->isClientValidationError('TEDB-101'));
-        $this->assertTrue($this->listener->isClientValidationError('TEDB-102'));
-        $this->assertFalse($this->listener->isClientValidationError('TEDB-400'));
+        $this->assertTrue($this->listener->isClientValidationError('env:Client'));
+        $this->assertTrue($this->listener->isClientValidationError('Client'));
+        $this->assertTrue($this->listener->isClientValidationError('soap:Sender'));
+        $this->assertFalse($this->listener->isClientValidationError('env:Server'));
+        $this->assertFalse($this->listener->isClientValidationError('TEDB-101'));
         $this->assertFalse($this->listener->isClientValidationError('UNKNOWN'));
     }
 
     public function testIsServerErrorIdentifiesServerErrors(): void
     {
-        $this->assertTrue($this->listener->isServerError('TEDB-400'));
-        $this->assertFalse($this->listener->isServerError('TEDB-100'));
-        $this->assertFalse($this->listener->isServerError('TEDB-101'));
+        $this->assertTrue($this->listener->isServerError('env:Server'));
+        $this->assertTrue($this->listener->isServerError('Server'));
+        $this->assertTrue($this->listener->isServerError('soap:Receiver'));
+        $this->assertFalse($this->listener->isServerError('env:Client'));
+        $this->assertFalse($this->listener->isServerError('TEDB-400'));
         $this->assertFalse($this->listener->isServerError('UNKNOWN'));
     }
 
@@ -205,7 +366,7 @@ class FaultEventListenerTest extends TestCase
         }, E_DEPRECATED | E_USER_DEPRECATED);
 
         try {
-            $this->listener->extractErrorDetails('<error><code>TEDB-100</code></error>');
+            $this->listener->extractErrorDetails('<error><code>00002</code></error>');
         } finally {
             restore_error_handler();
         }

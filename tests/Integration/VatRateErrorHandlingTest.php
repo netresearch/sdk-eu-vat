@@ -11,9 +11,22 @@ use DateTime;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
+use Netresearch\EuVatSdk\Exception\ValidationException;
+use VCR\VCR;
 
 /**
  * Integration tests for error handling scenarios
+ *
+ * The recorded fault shape these tests pin down is:
+ *
+ * ```xml
+ * <faultcode>env:Client</faultcode>
+ * <faultstring>TEDB-ERR-2 - Request is not valid</faultstring>
+ * <detail><ns2:retrieveVatRatesFaultMsg><ns0:error>
+ *   <ns0:code>00002</ns0:code>
+ *   <ns0:description>The Member State "XX" does not exist.</ns0:description>
+ * </ns0:error></ns2:retrieveVatRatesFaultMsg></detail>
+ * ```
  *
  * @group integration
  * @group network
@@ -25,181 +38,142 @@ use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 class VatRateErrorHandlingTest extends IntegrationTestCase
 {
     /**
-     * Test handling of invalid country code error (TEDB-101)
+     * Unknown member state codes are rejected by the service with TEDB-ERR-2
      *
      * @test
      */
     public function testInvalidCountryCodeError(): void
     {
-        $cassetteName = 'error-invalid-country-code';
+        $this->setupVcr('error-invalid-country-code');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
-
-        // Request with invalid country code
         $request = new VatRatesRequest(
-            memberStates: ['XX', 'YY'], // Invalid country codes
+            memberStates: ['XX', 'YY'], // Unknown country codes
             situationOn: new DateTime('2024-01-01')
         );
 
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101)');
-        $this->expectExceptionCode('TEDB-101');
-
-        $this->client->retrieveVatRates($request);
+        try {
+            $this->client->retrieveVatRates($request);
+            $this->fail('Expected InvalidRequestException for unknown member states');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
+            $this->assertStringContainsString('TEDB-ERR-2 - Request is not valid', $e->getMessage());
+            $this->assertStringContainsString('The Member State "XX" does not exist.', $e->getMessage());
+            $this->assertStringContainsString('The Member State "YY" does not exist.', $e->getMessage());
+        }
     }
 
     /**
-     * Test handling of empty member states array error (TEDB-102)
+     * An empty member state list never reaches the service
+     *
+     * VatRatesRequest rejects it in its own constructor, so no SOAP fault mapping
+     * is involved and the cassette for this scenario is empty.
      *
      * @test
      */
     public function testEmptyMemberStatesError(): void
     {
-        $cassetteName = 'error-empty-member-states';
+        $this->setupVcr('error-empty-member-states');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Member states array cannot be empty');
 
-        // Request with empty member states array
-        $request = new VatRatesRequest(
+        new VatRatesRequest(
             memberStates: [],
             situationOn: new DateTime('2024-01-01')
         );
-
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Empty member states array provided (TEDB-102)');
-        $this->expectExceptionCode('TEDB-102');
-
-        $this->client->retrieveVatRates($request);
     }
 
     /**
-     * Test handling of future date requests
+     * Dates beyond the accepted range never reach the service either
+     *
+     * VatRatesRequest caps the situation date at five years into the future.
      *
      * @test
      */
     public function testFutureDateError(): void
     {
-        $cassetteName = 'error-future-date';
+        $this->setupVcr('error-future-date');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Date cannot be more than 5 years in the future');
 
-        // Request with date far in the future
-        $futureDate = new DateTime('+10 years');
-
-        $request = new VatRatesRequest(
+        new VatRatesRequest(
             memberStates: ['DE'],
-            situationOn: $futureDate
+            situationOn: new DateTime('+10 years')
         );
-
-        // The service might return an error or empty results for future dates
-        try {
-            $response = $this->client->retrieveVatRates($request);
-
-            // If no exception, verify the response handling
-            $this->assertInstanceOf(VatRatesResponse::class, $response);
-
-            // Future dates might return current rates or throw an error
-            if ($response->getResults() !== []) {
-            }
-        } catch (InvalidRequestException $e) {
-            // Service might reject far future dates
-            $this->assertStringContainsString('date', strtolower($e->getMessage()));
-        }
     }
 
     /**
-     * Test handling of non-EU country codes
+     * Non-EU country codes produce the same TEDB-ERR-2 fault
      *
      * @test
      */
     public function testNonEuCountryCodeError(): void
     {
-        $cassetteName = 'error-non-eu-country';
+        $this->setupVcr('error-non-eu-country');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
-
-        // Request with non-EU country codes
         $request = new VatRatesRequest(
             memberStates: ['US', 'CN', 'JP'], // Non-EU countries
             situationOn: new DateTime('2024-01-01')
         );
 
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101)');
-
-        $this->client->retrieveVatRates($request);
+        try {
+            $this->client->retrieveVatRates($request);
+            $this->fail('Expected InvalidRequestException for non-EU member states');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
+            $this->assertStringContainsString('The Member State "US" does not exist.', $e->getMessage());
+        }
     }
 
     /**
-     * Test handling of Brexit transition (UK after leaving EU)
+     * GB is still served after Brexit, mapped onto the UK member state
+     *
+     * The recorded response is a plain HTTP 200 with UK rate results, so the
+     * service does not treat GB as an unknown member state.
      *
      * @test
      */
     public function testBrexitTransitionHandling(): void
     {
-        $cassetteName = 'error-brexit-after-transition';
+        $this->setupVcr('error-brexit-after-transition');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
-
-        // Request UK rates after Brexit transition period
         $request = new VatRatesRequest(
             memberStates: ['GB'],
             situationOn: new DateTime('2022-01-01') // After Brexit
         );
 
-        // UK should no longer be valid after Brexit
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101)');
+        $response = $this->client->retrieveVatRates($request);
 
-        $this->client->retrieveVatRates($request);
+        $this->assertInstanceOf(VatRatesResponse::class, $response);
+        $this->assertNotEmpty($response->getResults(), 'Service returns results for GB');
+
+        foreach ($response->getResults() as $result) {
+            $this->assertSame('UK', $result->getMemberState());
+        }
     }
 
     /**
-     * Test handling of mixed valid and invalid country codes
+     * A single unknown code rejects the whole request
      *
      * @test
      */
     public function testMixedValidInvalidCountryCodes(): void
     {
-        $cassetteName = 'error-mixed-country-codes';
+        $this->setupVcr('error-mixed-country-codes');
 
-        if ($this->shouldRefreshCassettes()) {
-            $this->recordCassette($cassetteName);
-        } else {
-            $this->insertCassette($cassetteName);
-        }
-
-        // Mix of valid EU and invalid country codes
         $request = new VatRatesRequest(
             memberStates: ['DE', 'XX', 'FR', 'YY'], // Mixed valid/invalid
             situationOn: new DateTime('2024-01-01')
         );
 
-        // Service should reject the entire request
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101)');
-
-        $this->client->retrieveVatRates($request);
+        try {
+            $this->client->retrieveVatRates($request);
+            $this->fail('Expected InvalidRequestException for a partially invalid request');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
+            $this->assertStringContainsString('The Member State "XX" does not exist.', $e->getMessage());
+        }
     }
 
     /**

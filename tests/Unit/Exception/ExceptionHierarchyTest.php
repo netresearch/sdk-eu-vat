@@ -98,14 +98,14 @@ class ExceptionHierarchyTest extends TestCase
         $this->assertNull($exception->getErrorCode());
 
         // With error code
-        $exception = new InvalidRequestException('Invalid date format provided', 'TEDB-100');
-        $this->assertEquals('TEDB-100', $exception->getErrorCode());
+        $exception = new InvalidRequestException('Invalid date format provided', 'TEDB-ERR-2');
+        $this->assertEquals('TEDB-ERR-2', $exception->getErrorCode());
         $this->assertEquals('Invalid date format provided', $exception->getMessage());
 
         // With previous exception
         $previous = new Exception('Previous error');
-        $exception = new InvalidRequestException('Invalid country code provided', 'TEDB-101', $previous);
-        $this->assertEquals('TEDB-101', $exception->getErrorCode());
+        $exception = new InvalidRequestException('Invalid country code provided', 'TEDB-ERR-2', $previous);
+        $this->assertEquals('TEDB-ERR-2', $exception->getErrorCode());
         $this->assertSame($previous, $exception->getPrevious());
     }
 
@@ -119,8 +119,8 @@ class ExceptionHierarchyTest extends TestCase
         $this->assertNull($exception->getErrorCode());
 
         // With error code
-        $exception = new ServiceUnavailableException('Internal application error in EU VAT service', 'TEDB-400');
-        $this->assertEquals('TEDB-400', $exception->getErrorCode());
+        $exception = new ServiceUnavailableException('Internal application error in EU VAT service', 'env:Server');
+        $this->assertEquals('env:Server', $exception->getErrorCode());
         $this->assertEquals('Internal application error in EU VAT service', $exception->getMessage());
     }
 }

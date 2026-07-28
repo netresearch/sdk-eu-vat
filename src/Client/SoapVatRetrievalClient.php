@@ -87,7 +87,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     private readonly LoggerInterface $logger;
 
     /**
-     * Fault listener providing the documented TEDB fault-code to exception mapping
+     * Fault listener mapping SOAP faults to the documented domain exceptions
      */
     private readonly FaultEventListener $faultListener;
 
@@ -119,8 +119,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      *
      * @param VatRatesRequest $request Request containing member states and date
      * @return VatRatesResponse Structured response with VAT rate data
-     * @throws InvalidRequestException For client-side validation errors (TEDB-100, 101, 102)
-     * @throws ServiceUnavailableException For server-side errors (TEDB-400) or network issues
+     * @throws InvalidRequestException For faults the service attributes to the caller
+     *         (faultcode `env:Client`), e.g. `TEDB-ERR-2 - Request is not valid`
+     * @throws ServiceUnavailableException For faults the service attributes to itself
+     *         (faultcode `env:Server`) or network issues
      * @throws ConfigurationException For WSDL or configuration errors
      * @throws VatServiceException For any other service-related errors
      *
@@ -159,7 +161,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             return $this->responseConverter->convert($responseObject);
         } catch (\SoapFault $fault) {
-            // Delegate the documented TEDB fault-code mapping (always throws a domain exception)
+            // Delegate the documented SOAP fault mapping (always throws a domain exception)
             $this->faultListener->handleSoapFault($fault);
 
             // Unreachable fallback in case handleSoapFault ever returns without throwing

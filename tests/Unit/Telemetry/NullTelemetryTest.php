@@ -45,7 +45,7 @@ class NullTelemetryTest extends TestCase
         $this->telemetry->recordError('retrieveVatRates', 'InvalidRequestException', [
             'member_states' => ['XX'],
             'error_message' => 'Invalid country code',
-            'error_code' => 'TEDB-101',
+            'error_code' => 'TEDB-ERR-2',
         ]);
     }
 

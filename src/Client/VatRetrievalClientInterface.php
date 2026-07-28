@@ -11,7 +11,6 @@ use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
-use Netresearch\EuVatSdk\Exception\ValidationException;
 
 /**
  * Main interface for retrieving VAT rates from the EU VAT Retrieval Service
@@ -64,24 +63,24 @@ interface VatRetrievalClientInterface
      * Queries the EU VAT Retrieval Service to obtain current VAT rates for the
      * specified member states as they were/are effective on the given date.
      *
+     * Note that local input validation (empty member state list, malformed ISO codes,
+     * out-of-range dates) happens in the VatRatesRequest constructor and therefore
+     * raises a ValidationException before this method is ever reached.
+     *
      * @param VatRatesRequest $request Request containing member states and situation date
      * @return VatRatesResponse Response containing VAT rates for all requested member states
      *
-     * @throws ValidationException When local request construction/validation fails:
-     *         - Empty member states array detected before any service call
-     *         - Invalid data supplied to VatRatesRequest
+     * @throws InvalidRequestException When the service rejects the request, i.e. returns a
+     *         SOAP fault with faultcode `env:Client`:
+     *         - Unknown member state codes (non-EU members, malformed codes)
+     *         - Any other request the service considers invalid
+     *         - Observed fault string: `TEDB-ERR-2 - Request is not valid`, with the
+     *           per-error descriptions from the fault detail appended to the message
+     *           and the TEDB identifier available via getErrorCode()
      *
-     * @throws InvalidRequestException When request validation fails:
-     *         - Invalid country codes (non-EU members, malformed codes)
-     *         - Invalid date format or dates too far in the future
-     *         - Empty member states array
-     *         - Error codes: TEDB-100, TEDB-101, TEDB-102
-     *
-     * @throws ServiceUnavailableException When service is unavailable:
-     *         - Network connectivity issues
-     *         - Service temporarily down for maintenance
-     *         - Internal application errors in EU service
-     *         - Error codes: TEDB-400
+     * @throws ServiceUnavailableException When the service is unavailable or fails internally:
+     *         - Network connectivity issues and timeouts
+     *         - SOAP faults with faultcode `env:Server`
      *
      * @throws SoapFaultException When SOAP-level errors occur:
      *         - Malformed SOAP requests/responses

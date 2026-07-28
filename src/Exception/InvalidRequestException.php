@@ -10,35 +10,38 @@ use Throwable;
  * Exception for client-side validation errors and invalid API requests
  *
  * This exception is thrown when the request data is invalid according to the EU VAT service
- * specifications. It covers validation errors that are caught either client-side or returned
- * by the service with specific error codes.
+ * specifications. It covers validation errors that are caught either client-side or reported
+ * by the service.
  *
- * Known EU VAT service error codes mapped to this exception:
- * - TEDB-100: Invalid date format provided
- * - TEDB-101: Invalid country code provided
- * - TEDB-102: Empty member states array provided
+ * Service-side, this exception maps to SOAP faults the service attributes to the caller, i.e.
+ * a faultcode whose local part is `Client` (SOAP 1.1) or `Sender` (SOAP 1.2). The TEDB error
+ * identifier travels in the faultstring, for example `TEDB-ERR-2 - Request is not valid`, and
+ * is exposed via getErrorCode(). The fault detail carries the individual service errors, e.g.
+ * code `00002` with description `The Member State "XX" does not exist.`; those descriptions are
+ * appended to the exception message.
  *
  * @example Invalid country code:
  * ```php
  * try {
  *     $request = new VatRatesRequest(['XX'], new DateTime());
+ *     $response = $client->retrieveVatRates($request);
  * } catch (InvalidRequestException $e) {
  *     echo "Invalid request: " . $e->getMessage();
- *     // Output: Invalid request: Invalid country code provided: XX
+ *     // Output: Invalid request: Invalid request rejected by the EU VAT service
+ *     //         (TEDB-ERR-2): TEDB-ERR-2 - Request is not valid
+ *     //         ([00002] The Member State "XX" does not exist.)
  * }
  * ```
  *
- * @example Handling specific TEDB codes:
+ * @example Reacting to the TEDB identifier:
  * ```php
  * try {
  *     $response = $client->retrieveVatRates($request);
  * } catch (InvalidRequestException $e) {
- *     if ($e->getErrorCode() === 'TEDB-100') {
- *         // Handle invalid date format
- *     } elseif ($e->getErrorCode() === 'TEDB-101') {
- *         // Handle invalid country code
+ *     if ($e->getErrorCode() === 'TEDB-ERR-2') {
+ *         // The service rejected the request payload - fix the input and retry
  *     } else {
- *         // Handle other invalid request errors
+ *         // No TEDB identifier in the faultstring, or a locally raised validation error
  *     }
  * }
  * ```
@@ -51,7 +54,9 @@ class InvalidRequestException extends VatServiceException
 {
     /**
      * @param string         $message   Error message.
-     * @param string|null    $errorCode Optional error code (e.g., 'TEDB-100', 'TEDB-101').
+     * @param string|null    $errorCode Optional error code. For service-side faults this is the
+     *                                  TEDB identifier from the faultstring (e.g., 'TEDB-ERR-2'),
+     *                                  falling back to the raw SOAP fault code.
      * @param Throwable|null $previous  Previous exception if any.
      */
     public function __construct(
@@ -65,7 +70,7 @@ class InvalidRequestException extends VatServiceException
     /**
      * Get the specific error code if available
      *
-     * @return string|null The error code (e.g., 'TEDB-100') or null if not applicable
+     * @return string|null The error code (e.g., 'TEDB-ERR-2') or null if not applicable
      */
     public function getErrorCode(): ?string
     {

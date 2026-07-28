@@ -126,7 +126,9 @@ class SoapVatRetrievalClientTest extends TestCase
     public function testRetrieveVatRatesHandlesSoapFaultFallback(): void
     {
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-        $soapFault = new \SoapFault('TEDB-999', 'Unknown fault');
+        // A fault code the service is not documented to send and that carries no
+        // client/server attribution must stay a generic SOAP fault.
+        $soapFault = new \SoapFault('env:VersionMismatch', 'Unknown fault');
 
         $mockEngine = $this->createMock(Engine::class);
         $mockEngine->expects($this->once())
@@ -141,10 +143,25 @@ class SoapVatRetrievalClientTest extends TestCase
         $client->retrieveVatRates($request);
     }
 
-    public function testRetrieveVatRatesMapsTedbFaultToInvalidRequestException(): void
+    /**
+     * The fault fixture is taken verbatim from tests/fixtures/cassettes/error-invalid-country-code:
+     * faultcode `env:Client`, faultstring `TEDB-ERR-2 - Request is not valid`, with the per-error
+     * descriptions carried in the fault detail.
+     */
+    public function testRetrieveVatRatesMapsRecordedClientFaultToInvalidRequestException(): void
     {
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-        $soapFault = new \SoapFault('TEDB-101', 'Invalid country code');
+
+        $error = new \stdClass();
+        $error->code = '00002';
+        $error->description = 'The Member State "XX" does not exist.';
+        $faultMsg = new \stdClass();
+        $faultMsg->error = $error;
+        $detail = new \stdClass();
+        $detail->retrieveVatRatesFaultMsg = $faultMsg;
+
+        $soapFault = new \SoapFault('env:Client', 'TEDB-ERR-2 - Request is not valid');
+        $soapFault->detail = $detail;
 
         $mockEngine = $this->createMock(Engine::class);
         $mockEngine->expects($this->once())
@@ -153,8 +170,31 @@ class SoapVatRetrievalClientTest extends TestCase
 
         $client = new SoapVatRetrievalClient($this->config, $mockEngine);
 
-        $this->expectException(InvalidRequestException::class);
-        $this->expectExceptionMessage('Invalid country code provided (TEDB-101): Invalid country code');
+        try {
+            $client->retrieveVatRates($request);
+            $this->fail('Expected InvalidRequestException');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
+            $this->assertStringContainsString('TEDB-ERR-2 - Request is not valid', $e->getMessage());
+            $this->assertStringContainsString('[00002] The Member State "XX" does not exist.', $e->getMessage());
+            $this->assertSame($soapFault, $e->getPrevious());
+        }
+    }
+
+    public function testRetrieveVatRatesMapsServerFaultToServiceUnavailableException(): void
+    {
+        $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
+        $soapFault = new \SoapFault('env:Server', 'Internal processing failure');
+
+        $mockEngine = $this->createMock(Engine::class);
+        $mockEngine->expects($this->once())
+            ->method('request')
+            ->willThrowException($soapFault);
+
+        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+
+        $this->expectException(ServiceUnavailableException::class);
+        $this->expectExceptionMessage('Internal error in the EU VAT service (env:Server): Internal processing failure');
 
         $client->retrieveVatRates($request);
     }
@@ -162,7 +202,7 @@ class SoapVatRetrievalClientTest extends TestCase
     public function testRetrieveVatRatesLetsDomainExceptionsPropagateUnwrapped(): void
     {
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
-        $domainException = new InvalidRequestException('Invalid request data', 'TEDB-101');
+        $domainException = new InvalidRequestException('Invalid request data', 'TEDB-ERR-2');
 
         $mockEngine = $this->createMock(Engine::class);
         $mockEngine->expects($this->once())

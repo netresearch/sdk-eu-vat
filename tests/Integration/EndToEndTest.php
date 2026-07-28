@@ -206,9 +206,12 @@ class EndToEndTest extends IntegrationTestCase
             $client->retrieveVatRates($request);
             $this->fail('Should throw exception for invalid country codes');
         } catch (InvalidRequestException $e) {
-            $this->assertStringContainsString('TEDB-101', $e->getMessage());
+            // The service rejects unknown member states with faultcode env:Client and a
+            // faultstring of "TEDB-ERR-2 - Request is not valid".
+            $this->assertStringContainsString('TEDB-ERR-2', $e->getMessage());
+            $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
         } catch (SoapFaultException $e) {
-            // SOAP fault is also acceptable for invalid country codes
+            // A fault with an unrecognised faultcode is also acceptable here
             $this->assertStringContainsString('TEDB-ERR-2', $e->getMessage());
         }
 
