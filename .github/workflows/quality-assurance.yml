@@ -31,9 +31,13 @@ jobs:
       extensions: "soap, libxml, mbstring"
       coverage: "xdebug"
       run-phpstan: false
-      # Unit suite (with Clover coverage) must pass; the integration suite
-      # replays committed VCR cassettes (no network) and must pass as well.
-      phpunit-cmd: 'vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --testsuite=integration --no-coverage'
+      # Unit suite (with Clover coverage) must pass; the integration suite and
+      # the network group both replay committed VCR cassettes without touching
+      # the network, so all three must pass. The network group is excluded from
+      # the default run by phpunit.xml and has to be selected explicitly --
+      # leaving it out of CI is what once let a broken SOAP fault mapping ship
+      # behind a green badge.
+      phpunit-cmd: 'vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --testsuite=integration --no-coverage && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --group network --no-coverage'
       upload-coverage-codecov: true
       coverage-php-version: "8.2"
       coverage-file: "./coverage.xml"

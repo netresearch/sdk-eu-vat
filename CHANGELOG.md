@@ -7,28 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This release corrects the SOAP request encoding, the response conversion and the
+exception contract. Each of those changes alters observable behaviour for existing
+code, so the next release is a major version. Read "Breaking changes" before upgrading.
+
+### Breaking changes
+
+- **VAT rate values can be `null`.** `VatRate::getValue()`, `getDecimalValue()`,
+  `getRawValue()` and `getValueAsFloat()` are nullable, and `__toString()` returns
+  `''` for such a rate. The service schema (`VatRetrievalServiceType.xsd`) declares
+  `value` as optional for *every* rate type, not only exempt ones — a rate a member
+  state does not levy (for example `PARKING_RATE`) arrives without a value. Previously
+  any value-less rate aborted the entire response with a `ConversionException`.
+  Guard with `if ($rate->getValue() !== null)` before arithmetic. Note that
+  `(string) $rate` yields `''`, which is **not** safe to pass to `BigDecimal::of()`.
+- **Different exception types leave `retrieveVatRates()`.** SOAP faults the service
+  attributes to the caller now surface as `InvalidRequestException`, and faults it
+  attributes to itself as `ServiceUnavailableException`, where both previously
+  surfaced as `SoapFaultException`. `ConversionException`, `ParseException` and
+  `ConfigurationException` now propagate unchanged instead of being wrapped in
+  `UnexpectedResponseException`. Existing `catch` blocks may no longer match.
+- **The documented TEDB fault codes were fictional.** `TEDB-100`, `TEDB-101`,
+  `TEDB-102` and `TEDB-400` appear in no service response, WSDL or schema; they
+  existed only in this SDK's own documentation and were never produced. The service
+  sends a responsibility marker in `faultcode` plus a code such as `TEDB-ERR-2` in
+  `faultstring`. Code branching on the old constants never matched and must be
+  rewritten against `getErrorCode()`, which now returns the real code, or `null`
+  when the fault string carries none.
+- **`DateTypeConverter::convertPhpToXml()` returns a complete XML element**
+  (`<date>2024-01-15</date>`) instead of a bare date string, as the ext-soap typemap
+  contract requires. This class is public; code reusing it in a custom typemap or
+  asserting on its return value is affected.
+
 ### Added
-- Security workflow with gitleaks secret scanning, dependency review, and composer audit
+
 - PHP 8.4 to the CI test and static-analysis matrices
-- VCR cassettes for the vat-rates integration tests are now committed; the tests are excluded from the default suites (`@group network`) but replay offline when run via `--group network`
+- The `network` test group runs in CI, replaying committed cassettes offline; it was
+  previously excluded everywhere, which is how the broken fault mapping stayed hidden
+- `examples/` is covered by static analysis, so documentation code cannot drift from
+  the API it demonstrates
 
 ### Changed
-- **Breaking**: `VatRate::getValue()`, `getDecimalValue()`, `getRawValue()`, and `getValueAsFloat()` now return `null` for exempt rate types (`EXEMPTED`, `NOT_APPLICABLE`, `OUT_OF_SCOPE`), which previously failed conversion with `ConversionException`; guard with `VatRate::isExempt()` or use `(string) $rate`
-- Migrated the quality-assurance workflow to the shared netresearch/.github php-ci reusable workflow
+
+- Least-privilege permissions declared in the security workflow
+- Migrated the quality-assurance workflow to the shared netresearch/.github php-ci
+  reusable workflow
 - Replaced generic contact emails with GitHub references
-- Integration tests are now enforced in CI instead of being advisory
+- Integration tests are enforced in CI instead of being advisory
 - CI installs dependencies fresh from composer.json (composer.lock is no longer committed)
+- `symfony/event-dispatcher` accepts `^6.0 || ^7.0`; v8 requires PHP >= 8.4 and stays
+  excluded while the floor is PHP 8.2
+- `php-vcr/php-vcr` constrained to `>=1.6.4 <1.8.2`: from 1.8.2 its `SoapClient`
+  declares a parameter the ext-soap-engine releases installable on PHP 8.2 and 8.3
+  do not, which is a fatal error rather than a test failure
 
 ### Fixed
-- Hardened GitHub Actions workflows against supply chain attacks (pinned action SHAs, least-privilege permissions)
-- `situationOn` date encoding now sends the correct xsd:date value to the SOAP service; all integration-test VCR cassettes were re-recorded with the corrected request body
-- Exempt VAT rate types no longer fail numeric conversion
-- Exception contract: client errors consistently throw the documented SDK exception types
-- Documentation example for `getRate()` corrected
+
+- `situationOn` was transmitted as an empty element, so the service answered
+  historical queries with current rates. All cassettes were re-recorded against the
+  corrected request body
+- Rates without a value no longer abort conversion of the whole response
+- SOAP faults are classified against the shapes the service actually returns
+- Documentation and examples called `getVatRate()`, which does not exist, and
+  dereferenced nullable rate values unguarded
+- Examples keyed rates by member state, silently keeping one arbitrary rate per
+  country although the service returns several
+- Removed deprecated `libxml_disable_entity_loader()` calls and restored libxml error
+  handling in a `finally` block
+- Host-identifying data (developer IP addresses, local certificate paths) removed from
+  the recorded cassettes
+- Cassettes are tracked by an explicit `.gitignore` rule instead of manual force-adds,
+  so a fresh clone replays offline rather than recording live traffic
 
 ### Removed
+
 - Internal planning documents (`.github/internal/`) from the repository
-- `composer.lock` (SDK library consumers resolve their own dependency set)
+- `composer.lock` (consumers of a library resolve their own dependency set)
 
 ## [1.1.0] - 2025-08-12
 
