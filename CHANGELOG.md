@@ -8,7 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- No unreleased changes yet
+- Security workflow with gitleaks secret scanning, dependency review, and composer audit
+- PHP 8.4 to the CI test and static-analysis matrices
+- VCR cassettes for the vat-rates integration tests are now committed; the tests are excluded from the default suites (`@group network`) but replay offline when run via `--group network`
+
+### Changed
+- **Breaking**: `VatRate::getValue()`, `getDecimalValue()`, `getRawValue()`, and `getValueAsFloat()` now return `null` for exempt rate types (`EXEMPTED`, `NOT_APPLICABLE`, `OUT_OF_SCOPE`), which previously failed conversion with `ConversionException`; guard with `VatRate::isExempt()` or use `(string) $rate`
+- Migrated the quality-assurance workflow to the shared netresearch/.github php-ci reusable workflow
+- Replaced generic contact emails with GitHub references
+- Integration tests are now enforced in CI instead of being advisory
+- CI installs dependencies fresh from composer.json (composer.lock is no longer committed)
+
+### Fixed
+- Hardened GitHub Actions workflows against supply chain attacks (pinned action SHAs, least-privilege permissions)
+- `situationOn` date encoding now sends the correct xsd:date value to the SOAP service; all integration-test VCR cassettes were re-recorded with the corrected request body
+- Exempt VAT rate types no longer fail numeric conversion
+- Exception contract: client errors consistently throw the documented SDK exception types
+- Documentation example for `getRate()` corrected
+
+### Removed
+- Internal planning documents (`.github/internal/`) from the repository
+- `composer.lock` (SDK library consumers resolve their own dependency set)
 
 ## [1.1.0] - 2025-08-12
 

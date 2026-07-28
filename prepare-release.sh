@@ -35,10 +35,14 @@ echo
 echo "Preparing release v$VERSION..."
 echo
 
-# Update CHANGELOG.md date
-echo "1. Updating CHANGELOG.md..."
-DATE=$(date +%Y-%m-%d)
-sed -i "s/## \\[1.0.0\\] - 2024-XX-XX/## \\[$VERSION\\] - $DATE/" CHANGELOG.md
+# Check CHANGELOG.md for the release section
+echo "1. Checking CHANGELOG.md..."
+if ! grep -q "^## \\[$VERSION\\]" CHANGELOG.md; then
+    echo "Error: CHANGELOG.md has no '## [$VERSION]' section."
+    echo "Please move the entries from '## [Unreleased]' into a"
+    echo "'## [$VERSION] - $(date +%Y-%m-%d)' section manually, then re-run this script."
+    exit 1
+fi
 
 # Run all tests
 echo
@@ -53,7 +57,7 @@ composer analyse
 # Run code style check
 echo
 echo "4. Checking code style..."
-composer cs:check
+composer cs-check
 
 # Validate composer.json
 echo
@@ -68,13 +72,19 @@ php tests/validate-package.php
 # Run security check
 echo
 echo "7. Running security check..."
-composer audit || true
+if ! composer audit; then
+    echo
+    echo "WARNING: composer audit reported security advisories (see above)."
+    read -p "Continue with the release anyway? [y/N] " AUDIT_CONTINUE
+    if [[ ! "$AUDIT_CONTINUE" =~ ^[Yy]$ ]]; then
+        echo "Release aborted."
+        exit 1
+    fi
+fi
 
 # Create release tag
 echo
 echo "8. Creating git tag..."
-git add CHANGELOG.md
-git commit -m "Release v$VERSION"
 git tag -a "v$VERSION" -m "Release version $VERSION"
 
 echo
@@ -83,7 +93,7 @@ echo
 echo "Next steps:"
 echo "1. Push changes: git push origin main"
 echo "2. Push tag: git push origin v$VERSION"
-echo "3. Create GitHub release with RELEASE_NOTES.md content"
+echo "3. Create GitHub release using the CHANGELOG.md section for v$VERSION"
 echo "4. Submit to Packagist:"
 echo "   - Go to https://packagist.org/packages/submit"
 echo "   - Enter repository URL: https://github.com/netresearch/sdk-eu-vat"
