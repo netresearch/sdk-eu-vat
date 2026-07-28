@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
     with:
-      php-versions: '["8.2","8.3"]'
+      php-versions: '["8.2","8.3","8.4"]'
       extensions: "soap, libxml, mbstring"
       coverage: "none"
       phpstan-cmd: 'vendor/bin/phpstan analyse --no-progress --error-format=github && vendor/bin/phpcs && vendor/bin/phpmd src text phpmd.xml'
@@ -27,13 +27,13 @@ jobs:
     permissions:
       contents: read
     with:
-      php-versions: '["8.2","8.3"]'
+      php-versions: '["8.2","8.3","8.4"]'
       extensions: "soap, libxml, mbstring"
       coverage: "xdebug"
       run-phpstan: false
-      # Unit suite (with Clover coverage) must pass; the integration suite is
-      # advisory and keeps its original continue-on-error semantics via `|| true`.
-      phpunit-cmd: 'vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml && { USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --testsuite=integration --no-coverage || true; }'
+      # Unit suite (with Clover coverage) must pass; the integration suite
+      # replays committed VCR cassettes (no network) and must pass as well.
+      phpunit-cmd: 'vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage.xml && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --testsuite=integration --no-coverage'
       upload-coverage-codecov: true
       coverage-php-version: "8.2"
       coverage-file: "./coverage.xml"
