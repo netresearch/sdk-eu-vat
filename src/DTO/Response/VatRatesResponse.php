@@ -16,26 +16,37 @@ use LogicException;
  * VAT rate information for the requested member states. It provides convenient
  * methods for filtering and accessing the results.
  *
+ * Note that the service returns one result per rate type (STANDARD, REDUCED, ...) per
+ * member state, and that VatRate::getValue() is null for rates the service reports
+ * without a percentage. Both are handled explicitly in the examples below.
+ *
  * @example Basic usage:
  * ```php
  * $response = $client->retrieveVatRates($request);
  *
  * // Iterate over all results
  * foreach ($response->getResults() as $result) {
+ *     $value = $result->getRate()->getValue();
  *     echo sprintf(
- *         "%s: %s%% (%s)\n",
+ *         "%s: %s (%s)\n",
  *         $result->getMemberState(),
- *         $result->getRate()->getValue(),
+ *         $value === null ? 'n/a' : $value . '%',
  *         $result->getRate()->getType()
  *     );
  * }
  * ```
  *
- * @example Filtering by country:
+ * @example Picking the standard rate for one country:
  * ```php
- * $germanyRates = $response->getResultsForCountry('DE');
- * foreach ($germanyRates as $result) {
- *     echo $result->getRate()->getType() . ': ' . $result->getRate()->getValue() . "%\n";
+ * foreach ($response->getResultsForCountry('DE') as $result) {
+ *     if (!$result->getRate()->isStandard()) {
+ *         continue;
+ *     }
+ *
+ *     $value = $result->getRate()->getValue();
+ *     if ($value !== null) {
+ *         echo 'DE standard rate: ' . $value . "%\n";
+ *     }
  * }
  * ```
  *
@@ -43,7 +54,10 @@ use LogicException;
  * ```php
  * $foodstuffRates = $response->getResultsByCategory('FOODSTUFFS');
  * foreach ($foodstuffRates as $result) {
- *     echo $result->getMemberState() . ': ' . $result->getRate()->getValue() . "%\n";
+ *     $value = $result->getRate()->getValue();
+ *     if ($value !== null) {
+ *         echo $result->getMemberState() . ': ' . $value . "%\n";
+ *     }
  * }
  * ```
  *

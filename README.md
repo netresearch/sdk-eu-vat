@@ -73,11 +73,18 @@ $response = $client->retrieveVatRates($request);
 
 // Group results by country
 foreach ($response->getResults() as $result) {
+    $rate = $result->getRate();
+
+    // Some rate types carry no percentage at all — getValue() is null for those,
+    // and casting the rate to string yields an empty string. Decide explicitly
+    // what to display instead of printing an empty percentage.
+    $display = $rate->getValue() === null ? 'n/a' : (string) $rate . '%';
+
     printf(
-        "%s: %s%% (%s rate)\n",
+        "%s: %s (%s rate)\n",
         $result->getMemberState(),
-        (string) $result->getRate(),
-        $result->getRate()->getType()
+        $display,
+        $rate->getType()
     );
 }
 ```
@@ -90,17 +97,24 @@ use Brick\Math\BigDecimal;
 $vatRate = $result->getRate();
 
 // Get precise decimal value
-$rate = $vatRate->getValue(); // Returns BigDecimal, or null for exempt rate types (see isExempt())
+$rate = $vatRate->getValue(); // Returns BigDecimal, or null for rate types without a value
 
-// Calculate VAT amount (100 EUR at 19% VAT)
 $netAmount = BigDecimal::of('100.00');
-$vatAmount = $netAmount->multipliedBy($rate)->dividedBy('100', 2);
-$grossAmount = $netAmount->plus($vatAmount);
 
-// Be explicit when printing
-echo "Net: €" . $netAmount->__toString() . "\n";
-echo "VAT: €" . $vatAmount->__toString() . "\n"; 
-echo "Gross: €" . $grossAmount->__toString() . "\n";
+if ($rate === null) {
+    // No percentage was supplied for this rate type (e.g. exempt / out of scope).
+    // Treat it as zero VAT rather than dereferencing the null value.
+    echo "Net: €" . $netAmount->__toString() . " (no VAT, rate type: " . $vatRate->getType() . ")\n";
+} else {
+    // Calculate VAT amount (100 EUR at 19% VAT)
+    $vatAmount = $netAmount->multipliedBy($rate)->dividedBy('100', 2);
+    $grossAmount = $netAmount->plus($vatAmount);
+
+    // Be explicit when printing
+    echo "Net: €" . $netAmount->__toString() . "\n";
+    echo "VAT: €" . $vatAmount->__toString() . "\n";
+    echo "Gross: €" . $grossAmount->__toString() . "\n";
+}
 ```
 
 ### Custom Configuration
@@ -137,10 +151,15 @@ use Netresearch\EuVatSdk\Exception\{
 try {
     $response = $client->retrieveVatRates($request);
 } catch (InvalidRequestException $e) {
-    // Client-side validation errors (invalid country codes, dates)
+    // Client-side validation errors, or a SOAP fault the service blames on the
+    // request (faultcode env:Client / Sender).
     echo "Invalid request: " . $e->getMessage();
+    // getErrorCode() returns the TEDB identifier from the faultstring, e.g.
+    // "TEDB-ERR-2", or null when the error was raised locally by the SDK.
+    echo "Error code: " . ($e->getErrorCode() ?? 'n/a');
 } catch (ServiceUnavailableException $e) {
-    // Service is down or network issues
+    // Network/transport failure, or a SOAP fault the service blames on itself
+    // (faultcode env:Server / Receiver). getErrorCode() is null for transport errors.
     echo "Service unavailable: " . $e->getMessage();
 } catch (ConfigurationException $e) {
     // Invalid SDK configuration

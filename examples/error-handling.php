@@ -17,7 +17,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
+use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use Netresearch\EuVatSdk\Exception\{
     VatServiceException,
     InvalidRequestException,
@@ -281,8 +283,11 @@ try {
 // Example 9: Error recovery patterns
 echo "\n9. Error recovery patterns:\n";
 
+/**
+ * @return array<int, VatRateResult>
+ */
 function retrieveVatRatesWithRetry(
-    $client,
+    VatRetrievalClientInterface $client,
     VatRatesRequest $request,
     int $maxRetries = 3,
     int $delaySeconds = 1
@@ -314,7 +319,7 @@ function retrieveVatRatesWithRetry(
     }
     
     echo "   ✗ All retry attempts failed\n";
-    throw $lastException;
+    throw $lastException ?? new \RuntimeException('Retry loop finished without a result');
 }
 
 // Test retry logic with valid request

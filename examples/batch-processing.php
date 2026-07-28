@@ -17,7 +17,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\Client\ClientConfiguration;
+use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
+use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Brick\Math\BigDecimal;
 use Monolog\Logger;
@@ -60,20 +62,23 @@ try {
     
     echo "   ✓ Retrieved " . count($results) . " VAT rates in {$duration}ms\n";
     
-    // Group by VAT rate for analysis
+    // Group by VAT rate for analysis. getRawValue() is null for rate types
+    // without a percentage, which would silently collapse into an empty array
+    // key — bucket those under an explicit label instead.
     $rateGroups = [];
     foreach ($results as $result) {
-        $rate = $result->getRate()->getRawValue();
-        if (!isset($rateGroups[$rate])) {
-            $rateGroups[$rate] = [];
+        $rawRate = $result->getRate()->getRawValue();
+        $label = $rawRate === null ? 'no rate' : $rawRate . '%';
+        if (!isset($rateGroups[$label])) {
+            $rateGroups[$label] = [];
         }
-        $rateGroups[$rate][] = $result->getMemberState();
+        $rateGroups[$label][] = $result->getMemberState();
     }
-    
+
     echo "   VAT rate distribution:\n";
     ksort($rateGroups);
-    foreach ($rateGroups as $rate => $countries) {
-        echo "     {$rate}%: " . implode(', ', $countries) . "\n";
+    foreach ($rateGroups as $label => $countries) {
+        echo "     {$label}: " . implode(', ', $countries) . "\n";
     }
     
 } catch (VatServiceException $e) {
@@ -107,8 +112,9 @@ foreach ($analysisDates as $dateString) {
         
         foreach ($response->getResults() as $result) {
             $country = $result->getMemberState();
+            // May be null for rate types that carry no percentage.
             $rate = $result->getRate()->getRawValue();
-            
+
             if (!isset($historicalData[$country])) {
                 $historicalData[$country] = [];
             }
@@ -129,10 +135,12 @@ foreach ($historicalData as $country => $dates) {
     echo "     $country: ";
     $rates = [];
     foreach ($analysisDates as $date) {
-        if (isset($dates[$date])) {
-            $rates[] = $dates[$date] . '%';
+        if (!array_key_exists($date, $dates)) {
+            $rates[] = 'N/A';       // No result for that date
+        } elseif ($dates[$date] === null) {
+            $rates[] = 'no rate';   // Result exists, but carries no percentage
         } else {
-            $rates[] = 'N/A';
+            $rates[] = $dates[$date] . '%';
         }
     }
     echo implode(' → ', $rates) . "\n";
@@ -141,8 +149,13 @@ foreach ($historicalData as $country => $dates) {
 // Example 3: Chunk processing for large datasets
 echo "\n3. Chunk processing demonstration:\n";
 
+/**
+ * @param  string[] $countries
+ * @param  int<1, max> $chunkSize
+ * @return array{results: array<int, VatRateResult>, errors: array<int, array{chunk: string[], error: string}>}
+ */
 function processCountriesInChunks(
-    $client,
+    VatRetrievalClientInterface $client,
     array $countries,
     DateTime $date,
     int $chunkSize = 10
@@ -215,10 +228,28 @@ try {
     
     $response = $client->retrieveVatRates($request);
     
-    // Build VAT rate lookup
+    // Build VAT rate lookup. The service returns one result row per rate type
+    // (STANDARD, REDUCED, PARKING_RATE, ...) for each member state, so the rate
+    // type has to be selected explicitly — keying purely on the member state
+    // would silently keep whichever row happened to arrive last.
+    // This example prices everything at the standard rate. Real pricing depends on
+    // the product category: books, food or passenger transport often fall under a
+    // reduced rate, which you would select from the same response instead.
+    // Only keep rates that actually carry a percentage: getValue() is null for
+    // exempt/out-of-scope rate types and must never be fed into a BigDecimal
+    // calculation.
+    /** @var array<string, BigDecimal> $vatRates */
     $vatRates = [];
     foreach ($response->getResults() as $result) {
-        $vatRates[$result->getMemberState()] = $result->getRate()->getValue();
+        $rate = $result->getRate();
+        if (!$rate->isStandard()) {
+            continue;
+        }
+
+        $rateValue = $rate->getValue();
+        if ($rateValue !== null) {
+            $vatRates[$result->getMemberState()] = $rateValue;
+        }
     }
     
     echo "   Product pricing with VAT:\n";
@@ -250,7 +281,7 @@ try {
             $totalVat = $totalVat->plus($vatAmount);
             $totalGross = $totalGross->plus($grossPrice);
         } else {
-            echo "     {$product['name']} ({$country}): VAT rate not available\n";
+            echo "     {$product['name']} ({$country}): no usable standard VAT rate (missing or no percentage)\n";
         }
     }
     
@@ -270,7 +301,11 @@ try {
 // Example 5: Error handling in batch operations
 echo "\n5. Robust batch processing with error handling:\n";
 
-function robustBatchProcessing($client, array $batches): array
+/**
+ * @param  array<int, array{countries: string[], date: string}> $batches
+ * @return array{results: array<int, VatRateResult>, errors: array<int, string>}
+ */
+function robustBatchProcessing(VatRetrievalClientInterface $client, array $batches): array
 {
     $allResults = [];
     $errors = [];

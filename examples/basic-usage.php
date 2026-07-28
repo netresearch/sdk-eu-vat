@@ -19,6 +19,21 @@ use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
+use Netresearch\EuVatSdk\DTO\Response\VatRate;
+
+/**
+ * Format a VAT rate for display.
+ *
+ * Rate types such as exempt or out-of-scope carry no percentage at all:
+ * VatRate::getValue() returns null and casting the rate to a string yields an
+ * empty string. Render those explicitly instead of printing a bare "%".
+ *
+ * @param VatRate $rate The rate to render.
+ */
+function formatRate(VatRate $rate): string
+{
+    return $rate->getValue() === null ? 'n/a' : (string) $rate . '%';
+}
 
 // Create a basic client with default configuration
 $client = VatRetrievalClientFactory::create();
@@ -38,9 +53,9 @@ try {
 
     foreach ($response->getResults() as $result) {
         printf(
-            "   %s: %s%% (%s rate)\n",
+            "   %s: %s (%s rate)\n",
             $result->getMemberState(),
-            (string) $result->getRate(),
+            formatRate($result->getRate()),
             $result->getRate()->getType()
         );
     }
@@ -59,9 +74,9 @@ try {
 
     foreach ($response->getResults() as $result) {
         printf(
-            "   %s: %s%% (%s)\n",
+            "   %s: %s (%s)\n",
             $result->getMemberState(),
-            (string) $result->getRate(),
+            formatRate($result->getRate()),
             $result->getRate()->getType()
         );
     }
@@ -80,9 +95,9 @@ try {
     $response = $client->retrieveVatRates($request);
     foreach ($response->getResults() as $result) {
         printf(
-            "   %s (2020): %s%% (%s)\n",
+            "   %s (2020): %s (%s)\n",
             $result->getMemberState(),
-            (string) $result->getRate(),
+            formatRate($result->getRate()),
             $result->getRate()->getType()
         );
     }
@@ -125,14 +140,20 @@ try {
             
             echo "   Germany details:\n";
             echo "     - Country: " . $result->getMemberState() . "\n";
-            echo "     - Rate: " . (string) $vatRate . "%\n";
             echo "     - Type: " . $vatRate->getType() . "\n";
             echo "     - Date: " . $result->getSituationOn()->format('Y-m-d') . "\n";
-            
-            // Get precise decimal value for calculations (null for exempt rate types)
+
+            // Get precise decimal value for calculations. Rate types without a
+            // percentage (exempt, out of scope, ...) return null here, so always
+            // check before using the value.
             $decimalRate = $vatRate->getValue();
-            echo "     - Decimal rate: " . $decimalRate->__toString() . "\n";
-            
+            if ($decimalRate === null) {
+                echo "     - Rate: none (no percentage for this rate type)\n";
+            } else {
+                echo "     - Rate: " . (string) $vatRate . "%\n";
+                echo "     - Decimal rate: " . $decimalRate->__toString() . "\n";
+            }
+
             break;
         }
     }

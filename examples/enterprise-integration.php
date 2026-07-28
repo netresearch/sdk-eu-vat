@@ -18,6 +18,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
 use Netresearch\EuVatSdk\Client\{ClientConfiguration, VatRetrievalClientInterface};
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
+use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
 use Monolog\Logger;
@@ -32,6 +33,8 @@ echo "1. Implementing custom telemetry:\n";
 class EnterpriseTelemetry implements TelemetryInterface
 {
     private Logger $logger;
+
+    /** @var array<int, array<string, mixed>> */
     private array $metrics = [];
     
     public function __construct(Logger $logger)
@@ -39,6 +42,9 @@ class EnterpriseTelemetry implements TelemetryInterface
         $this->logger = $logger;
     }
     
+    /**
+     * @param array<string, mixed> $context
+     */
     public function recordRequest(string $operation, float $duration, array $context = []): void
     {
         // Record metrics for monitoring systems (Prometheus, DataDog, etc.)
@@ -69,6 +75,9 @@ class EnterpriseTelemetry implements TelemetryInterface
         ]);
     }
     
+    /**
+     * @param array<string, mixed> $context
+     */
     public function recordError(string $operation, string $errorType, array $context = []): void
     {
         $this->metrics[] = [
@@ -97,11 +106,17 @@ class EnterpriseTelemetry implements TelemetryInterface
         ]);
     }
     
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getMetrics(): array
     {
         return $this->metrics;
     }
     
+    /**
+     * @param array<string, mixed> $data
+     */
     private function sendToMonitoring(array $data): void
     {
         // In a real implementation, send to your monitoring system
@@ -143,6 +158,7 @@ echo "\n2. Setting up dependency injection:\n";
 
 class VatServiceContainer
 {
+    /** @var array<string, callable> */
     private array $services = [];
     
     public function register(string $id, callable $factory): void
@@ -150,7 +166,7 @@ class VatServiceContainer
         $this->services[$id] = $factory;
     }
     
-    public function get(string $id)
+    public function get(string $id): mixed
     {
         if (!isset($this->services[$id])) {
             throw new \InvalidArgumentException("Service '$id' not found");
@@ -198,6 +214,7 @@ class EnterpriseVatService
     private VatRetrievalClientInterface $client;
     private TelemetryInterface $telemetry;
     private Logger $logger;
+    /** @var array<string, array<string, array<string, mixed>>> */
     private array $cache = [];
     
     public function __construct(
@@ -210,6 +227,13 @@ class EnterpriseVatService
         $this->logger = $logger;
     }
     
+    /**
+     * Get the standard VAT rate per member state
+     *
+     * @param  string[] $countries
+     * @return array<string, array<string, mixed>> Keyed by member state; countries without a
+     *                                             standard rate are absent from the result.
+     */
     public function getVatRates(array $countries, \DateTimeInterface $date): array
     {
         $cacheKey = $this->getCacheKey($countries, $date);
@@ -229,15 +253,31 @@ class EnterpriseVatService
             $request = new VatRatesRequest($countries, $date);
             $response = $this->client->retrieveVatRates($request);
             
+            // The service returns one result row per rate type (STANDARD, REDUCED,
+            // PARKING_RATE, ...) for each member state. This wrapper exposes one entry
+            // per country, so the standard rate is picked explicitly — keying purely on
+            // the member state would silently keep whichever row arrived last. A service
+            // that prices reduced-rate goods (books, food, passenger transport) would
+            // select the matching rate type from the same response instead.
+            // Both 'rate' and 'decimal_rate' are null for rate types that carry no
+            // percentage — consumers must check before calculating.
             $results = [];
-            foreach ($response->getResults() as $result) {
-                $results[$result->getMemberState()] = [
-                    'country' => $result->getMemberState(),
-                    'rate' => $result->getRate()->getValue(),
-                    'type' => $result->getRate()->getType(),
-                    'decimal_rate' => $result->getRate()->getValue(),
-                    'date' => $result->getSituationOn()->format('Y-m-d'),
-                ];
+            foreach ($countries as $country) {
+                foreach ($response->getResultsForCountry($country) as $result) {
+                    $rate = $result->getRate();
+                    if (!$rate->isStandard()) {
+                        continue;
+                    }
+
+                    $results[$result->getMemberState()] = [
+                        'country' => $result->getMemberState(),
+                        'rate' => $rate->getRawValue(),
+                        'type' => $rate->getType(),
+                        'decimal_rate' => $rate->getValue(),
+                        'date' => $result->getSituationOn()->format('Y-m-d'),
+                    ];
+                    break;
+                }
             }
             
             // Cache the results
@@ -269,6 +309,9 @@ class EnterpriseVatService
         }
     }
     
+    /**
+     * @return array{net: string, vat: string, gross: string, rate: string}
+     */
     public function calculateVatAmount(string $netAmount, string $vatRate): array
     {
         $net = \Brick\Math\BigDecimal::of($netAmount);
@@ -285,6 +328,9 @@ class EnterpriseVatService
         ];
     }
     
+    /**
+     * @param string[] $countries
+     */
     private function getCacheKey(array $countries, \DateTimeInterface $date): string
     {
         sort($countries);
@@ -320,6 +366,9 @@ class VatServiceHealthCheck
         $this->logger = $logger;
     }
     
+    /**
+     * @return array<string, mixed>
+     */
     public function check(): array
     {
         $healthStatus = [
@@ -350,6 +399,11 @@ class VatServiceHealthCheck
                 'message' => $e->getMessage(),
                 'error_type' => get_class($e),
             ];
+
+            $this->logger->error('VAT service health check failed', [
+                'message' => $e->getMessage(),
+                'error_type' => get_class($e),
+            ]);
         }
         
         // Check 2: Response time
@@ -409,7 +463,7 @@ class VatServiceCircuitBreaker
         $this->timeoutSeconds = $timeoutSeconds;
     }
     
-    public function call(VatRatesRequest $request)
+    public function call(VatRatesRequest $request): VatRatesResponse
     {
         if ($this->isOpen) {
             if ($this->shouldAttemptReset()) {
@@ -461,6 +515,9 @@ class VatServiceCircuitBreaker
                (microtime(true) - $this->lastFailureTime) >= $this->timeoutSeconds;
     }
     
+    /**
+     * @return array{is_open: bool, failure_count: int, last_failure_time: float|null}
+     */
     public function getStatus(): array
     {
         return [
@@ -501,8 +558,14 @@ try {
 // Example 7: Production monitoring endpoint
 echo "\n7. Production monitoring endpoint:\n";
 
-function createMonitoringEndpoint($vatService, $healthCheck, $telemetry): array
-{
+/**
+ * @return array<string, mixed>
+ */
+function createMonitoringEndpoint(
+    EnterpriseVatService $vatService,
+    VatServiceHealthCheck $healthCheck,
+    EnterpriseTelemetry $telemetry
+): array {
     return [
         'service' => 'eu-vat-sdk',
         'version' => '1.0.0',

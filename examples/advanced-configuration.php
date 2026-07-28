@@ -96,10 +96,14 @@ try {
     $response = $client->retrieveVatRates($request);
     
     foreach ($response->getResults() as $result) {
+        $rate = $result->getRate();
+
+        // getValue() is null for rate types without a percentage (exempt,
+        // out of scope, ...), so pick the display value explicitly.
         printf(
-            "   %s: %s%% (logged to file)\n",
+            "   %s: %s (logged to file)\n",
             $result->getMemberState(),
-            $result->getRate()->getValue()
+            $rate->getValue() === null ? 'n/a' : (string) $rate . '%'
         );
     }
 

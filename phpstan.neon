@@ -3,6 +3,7 @@ parameters:
     paths:
         - src
         - tests
+        - examples
     
     # Exclude vendor and generated files
     excludePaths:
