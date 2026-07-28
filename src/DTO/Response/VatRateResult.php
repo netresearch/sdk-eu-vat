@@ -73,8 +73,9 @@ final class VatRateResult
     /**
      * Get the VAT rate
      *
-     * Note: for exempt/out-of-scope rate types the returned VatRate may carry
-     * no percentage value — its getValue() returns null (see VatRate::isExempt()).
+     * Note: the returned VatRate may carry no percentage value for any rate type —
+     * its getValue() returns null then. The XSD declares the value element optional
+     * for every member of rateValueTypeEnum.
      *
      * @return VatRate The VAT rate information
      */

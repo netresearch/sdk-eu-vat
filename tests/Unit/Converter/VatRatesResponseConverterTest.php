@@ -60,12 +60,14 @@ class VatRatesResponseConverterTest extends TestCase
     }
 
     /**
-     * The XSD declares the rate "value" element with minOccurs="0": exempt and
-     * out-of-scope rate types legitimately arrive without a percentage value.
+     * VatRetrievalServiceType.xsd declares the rate "value" element with
+     * minOccurs="0" inside rateValueType, which applies to every member of
+     * rateValueTypeEnum. A missing value is schema-valid for any rate type,
+     * so conversion must yield a VatRate with a null value instead of failing.
      *
-     * @dataProvider provideValuelessRateTypes
+     * @dataProvider provideRateTypes
      */
-    public function testConvertsExemptRateWithoutValue(string $rateType): void
+    public function testConvertsRateWithoutValueForAnyRateType(string $rateType): void
     {
         $response = new stdClass();
         $response->vatRateResults = $this->createResultData($rateType, null);
@@ -74,48 +76,89 @@ class VatRatesResponseConverterTest extends TestCase
 
         $this->assertCount(1, $results);
         $rate = $results[0]->getRate();
-        $this->assertTrue($rate->isExempt());
+        $this->assertSame($rateType, $rate->getType());
         $this->assertNull($rate->getValue());
         $this->assertNull($rate->getRawValue());
     }
 
     /**
+     * All rate types declared by rateValueTypeEnum in VatRetrievalServiceType.xsd.
+     *
      * @return array<string, array{string}>
      */
-    public static function provideValuelessRateTypes(): array
+    public static function provideRateTypes(): array
     {
         return [
-            'EXEMPTED' => ['EXEMPTED'],
+            'DEFAULT' => ['DEFAULT'],
+            'REDUCED_RATE' => ['REDUCED_RATE'],
+            'SUPER_REDUCED_RATE' => ['SUPER_REDUCED_RATE'],
+            'PARKING_RATE' => ['PARKING_RATE'],
             'NOT_APPLICABLE' => ['NOT_APPLICABLE'],
             'OUT_OF_SCOPE' => ['OUT_OF_SCOPE'],
+            'EXEMPTED' => ['EXEMPTED'],
         ];
     }
 
     /**
-     * @dataProvider provideValueRequiringRateTypes
+     * A single member state without a parking rate must not discard the rates
+     * of all other member states in the same multi-country response.
      */
-    public function testThrowsWhenValueMissingForRateTypeRequiringValue(string $rateType): void
+    public function testValuelessRateDoesNotDiscardOtherResults(): void
     {
+        $withValue = $this->createResultData('DEFAULT', BigDecimal::of('19.0'));
+        $withValue->memberState = 'DE';
+
+        $withoutValue = $this->createResultData('PARKING_RATE', null);
+        $withoutValue->memberState = 'FR';
+
+        $trailing = $this->createResultData('DEFAULT', BigDecimal::of('21.0'));
+        $trailing->memberState = 'NL';
+
         $response = new stdClass();
-        $response->vatRateResults = $this->createResultData($rateType, null);
+        $response->vatRateResults = [$withValue, $withoutValue, $trailing];
+
+        $results = $this->converter->convert($response)->getResults();
+
+        $this->assertCount(3, $results);
+        $this->assertSame(['DE', 'FR', 'NL'], array_map(
+            static fn($result): string => $result->getMemberState(),
+            $results
+        ));
+        $this->assertSame('19.0', $results[0]->getRate()->getRawValue());
+        $this->assertNull($results[1]->getRate()->getRawValue());
+        $this->assertSame('21.0', $results[2]->getRate()->getRawValue());
+    }
+
+    /**
+     * Accepting an absent value must not weaken validation of the elements the
+     * XSD declares as mandatory: "type" has no minOccurs="0".
+     */
+    public function testThrowsWhenRateTypeIsMissing(): void
+    {
+        $result = $this->createResultData('DEFAULT', BigDecimal::of('19.0'));
+        unset($result->rate->type);
+
+        $response = new stdClass();
+        $response->vatRateResults = $result;
 
         $this->expectException(ConversionException::class);
-        $this->expectExceptionMessage(sprintf('Missing "value" for VAT rate of type "%s"', $rateType));
+        $this->expectExceptionMessage('Missing "type" for VAT rate.');
 
         $this->converter->convert($response);
     }
 
     /**
-     * @return array<string, array{string}>
+     * A present but non-numeric value is not schema-valid for xs:double and
+     * must still be rejected.
      */
-    public static function provideValueRequiringRateTypes(): array
+    public function testThrowsWhenValueIsNotNumeric(): void
     {
-        return [
-            'DEFAULT' => ['DEFAULT'],
-            'STANDARD' => ['STANDARD'],
-            'REDUCED_RATE' => ['REDUCED_RATE'],
-            'SUPER_REDUCED_RATE' => ['SUPER_REDUCED_RATE'],
-            'PARKING_RATE' => ['PARKING_RATE'],
-        ];
+        $response = new stdClass();
+        $response->vatRateResults = $this->createResultData('DEFAULT', 'not-a-number');
+
+        $this->expectException(ConversionException::class);
+        $this->expectExceptionMessage('Expected "value" to be a BigDecimal object or numeric');
+
+        $this->converter->convert($response);
     }
 }

@@ -219,22 +219,37 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         $response = $this->client->retrieveVatRates($request);
 
-        $expectedRates = ['LU' => '17', 'MT' => '18'];
+        // Documented current behaviour, NOT a precision guarantee: the wire carries
+        // <value>17.0</value> typed xs:double (VatRetrievalServiceType.xsd declares
+        // rateValueType/value as xs:double), while BigDecimalTypeConverter registers
+        // for xsd:decimal. Its typemap entry therefore never fires, the value reaches
+        // the converter as a PHP float and the trailing zero is lost — getRawValue()
+        // returns "17", not "17.0". These assertions pin that lossy behaviour so the
+        // suite stops advertising a precision guarantee it does not provide; they will
+        // fail loudly once the xs:double/xsd:decimal mismatch is resolved, which is the
+        // point at which the expectations below must be tightened back to "17.0"/"18.0".
+        $rawValuesAsReceived = ['LU' => '17', 'MT' => '18'];
 
-        foreach ($expectedRates as $memberState => $expectedRate) {
+        foreach ($rawValuesAsReceived as $memberState => $rawValue) {
             $standardResult = $this->findStandardRateResult($response->getResults(), $memberState);
             $this->assertNotNull($standardResult, "Should find standard VAT rate for {$memberState}");
 
-            $vatRateString = $standardResult->getRate()->getRawValue();
-            $this->assertNotNull($vatRateString);
-            $this->assertIsNumeric($vatRateString);
+            $this->assertSame(
+                $rawValue,
+                $standardResult->getRate()->getRawValue(),
+                sprintf(
+                    'Raw value for %s reflects the float round-trip caused by the '
+                    . 'xs:double wire type vs. the xsd:decimal type converter registration.',
+                    $memberState
+                )
+            );
 
-            // VAT rates should maintain exact decimal values (no float rounding)
             $decimalValue = $standardResult->getRate()->getValue();
             $this->assertNotNull($decimalValue);
-            $this->assertTrue(
-                $decimalValue->isEqualTo($expectedRate),
-                "Expected {$memberState} standard rate {$expectedRate}, got {$decimalValue}"
+            $this->assertSame(
+                $rawValue,
+                (string) $decimalValue,
+                "Expected {$memberState} standard rate {$rawValue}, got {$decimalValue}"
             );
         }
     }

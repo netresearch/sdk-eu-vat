@@ -57,8 +57,10 @@ final class VatRate implements \Stringable
     /**
      * @param string      $type     VAT rate type (e.g., 'STANDARD', 'REDUCED', 'REDUCED[1]').
      * @param string|null $value    Percentage value as string (e.g., "19.0"), or null when the
-     *                              service provides no value (exempt/out-of-scope rate types —
-     *                              the XSD declares the value element with minOccurs="0").
+     *                              service provides no value. The XSD declares the value element
+     *                              with minOccurs="0" for every rate type, so any type may arrive
+     *                              without a value — typically exempt/out-of-scope rates, but also
+     *                              rates a member state does not levy (e.g. PARKING_RATE).
      * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS').
      */
     public function __construct(
@@ -82,8 +84,9 @@ final class VatRate implements \Stringable
     /**
      * Get the VAT rate as a BigDecimal for precise calculations
      *
-     * Returns null when the service provided no value for this rate, which is
-     * legitimate for exempt/out-of-scope rate types (see isExempt()).
+     * Returns null when the service provided no value for this rate. The XSD marks
+     * the value element optional for every rate type, so callers must handle null
+     * for any type, not only exempt/out-of-scope ones (see isExempt()).
      *
      * @return BigDecimal|null The VAT rate as a BigDecimal instance, or null if no value was provided
      * @throws ParseException If the value cannot be parsed as a decimal
@@ -124,7 +127,7 @@ final class VatRate implements \Stringable
      * Get the raw string value as received from the API
      *
      * @return string|null The VAT rate percentage as a string (e.g., "19.0"),
-     *                     or null if no value was provided (exempt/out-of-scope rates)
+     *                     or null if the service provided no value for this rate
      */
     public function getRawValue(): ?string
     {

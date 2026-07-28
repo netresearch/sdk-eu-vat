@@ -144,17 +144,13 @@ final class VatRatesResponseConverter
                 ?? throw new ConversionException('Missing "type" for VAT rate.');
             $value = $rateData->value ?? null;
 
-            // The XSD declares the rate "value" element with minOccurs="0":
-            // exempt/out-of-scope rate types legitimately arrive without a value.
+            // The XSD declares the rate "value" element with minOccurs="0" for every
+            // member of rateValueTypeEnum, not just the exempt/out-of-scope ones: a
+            // member state that does not levy e.g. a PARKING_RATE or SUPER_REDUCED_RATE
+            // returns the rate element without a value. A missing value is therefore
+            // schema-valid for any rate type and must not fail the response.
             if ($value === null) {
-                $vatRate = new VatRate(type: (string) $type, value: null, category: null);
-                if (!$vatRate->isExempt()) {
-                    throw new ConversionException(
-                        sprintf('Missing "value" for VAT rate of type "%s".', (string) $type)
-                    );
-                }
-
-                return $vatRate;
+                return new VatRate(type: (string) $type, value: null, category: null);
             }
 
             // Type check with fallback: Prefer BigDecimal from TypeConverter, fallback for edge cases
