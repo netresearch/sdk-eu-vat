@@ -63,7 +63,7 @@ try {
     // Group by VAT rate for analysis
     $rateGroups = [];
     foreach ($results as $result) {
-        $rate = $result->getVatRate()->getValue();
+        $rate = $result->getRate()->getRawValue();
         if (!isset($rateGroups[$rate])) {
             $rateGroups[$rate] = [];
         }
@@ -107,7 +107,7 @@ foreach ($analysisDates as $dateString) {
         
         foreach ($response->getResults() as $result) {
             $country = $result->getMemberState();
-            $rate = $result->getVatRate()->getValue();
+            $rate = $result->getRate()->getRawValue();
             
             if (!isset($historicalData[$country])) {
                 $historicalData[$country] = [];
@@ -218,7 +218,7 @@ try {
     // Build VAT rate lookup
     $vatRates = [];
     foreach ($response->getResults() as $result) {
-        $vatRates[$result->getMemberState()] = $result->getVatRate()->getValue();
+        $vatRates[$result->getMemberState()] = $result->getRate()->getValue();
     }
     
     echo "   Product pricing with VAT:\n";

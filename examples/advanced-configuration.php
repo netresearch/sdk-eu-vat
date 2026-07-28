@@ -99,7 +99,7 @@ try {
         printf(
             "   %s: %s%% (logged to file)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()
+            $result->getRate()->getValue()
         );
     }
 

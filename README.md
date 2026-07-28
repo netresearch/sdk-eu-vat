@@ -1,6 +1,6 @@
 # EU VAT SOAP SDK
 
-[![Build Status](https://github.com/netresearch/sdk-eu-vat/workflows/CI/badge.svg)](https://github.com/netresearch/sdk-eu-vat/actions)
+[![Quality Assurance](https://github.com/netresearch/sdk-eu-vat/actions/workflows/quality-assurance.yml/badge.svg)](https://github.com/netresearch/sdk-eu-vat/actions/workflows/quality-assurance.yml)
 [![Coverage Status](https://codecov.io/gh/netresearch/sdk-eu-vat/branch/main/graph/badge.svg)](https://codecov.io/gh/netresearch/sdk-eu-vat)
 [![Latest Stable Version](https://poser.pugx.org/netresearch/sdk-eu-vat/v/stable)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 [![License](https://poser.pugx.org/netresearch/sdk-eu-vat/license)](https://packagist.org/packages/netresearch/sdk-eu-vat)
@@ -11,7 +11,7 @@ A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/ta
 
 - 🏦 **Financial-Grade Precision**: Uses `brick/math` BigDecimal for exact VAT calculations
 - 🛡️ **Enterprise Ready**: Comprehensive error handling, logging, and telemetry
-- 🧪 **Thoroughly Tested**: 368 tests with 95%+ coverage and real service validation
+- 🧪 **Thoroughly Tested**: Comprehensive unit and integration test suites with real service validation
 - 🔄 **Modern SOAP**: Built on `php-soap/ext-soap-engine` for reliable SOAP operations
 - 📊 **Observability**: Built-in request/response logging and metrics
 - 🚀 **Performance**: Optimized with WSDL caching and connection pooling support
@@ -51,7 +51,7 @@ try {
         echo sprintf(
             "VAT rate for %s: %s%%\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()->__toString()
+            (string) $result->getRate()
         );
     }
 } catch (\Netresearch\EuVatSdk\Exception\VatServiceException $e) {
@@ -76,8 +76,8 @@ foreach ($response->getResults() as $result) {
     printf(
         "%s: %s%% (%s rate)\n",
         $result->getMemberState(),
-        $result->getVatRate()->getValue()->__toString(),
-        $result->getVatRate()->getType()
+        (string) $result->getRate(),
+        $result->getRate()->getType()
     );
 }
 ```
@@ -87,10 +87,10 @@ foreach ($response->getResults() as $result) {
 ```php
 use Brick\Math\BigDecimal;
 
-$vatRate = $result->getVatRate();
+$vatRate = $result->getRate();
 
 // Get precise decimal value
-$rate = $vatRate->getValue(); // Returns BigDecimal
+$rate = $vatRate->getValue(); // Returns BigDecimal, or null for exempt rate types (see isExempt())
 
 // Calculate VAT amount (100 EUR at 19% VAT)
 $netAmount = BigDecimal::of('100.00');

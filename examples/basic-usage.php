@@ -40,8 +40,8 @@ try {
         printf(
             "   %s: %s%% (%s rate)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()->__toString(),
-            $result->getVatRate()->getType()
+            (string) $result->getRate(),
+            $result->getRate()->getType()
         );
     }
 
@@ -61,8 +61,8 @@ try {
         printf(
             "   %s: %s%% (%s)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()->__toString(),
-            $result->getVatRate()->getType()
+            (string) $result->getRate(),
+            $result->getRate()->getType()
         );
     }
 
@@ -82,8 +82,8 @@ try {
         printf(
             "   %s (2020): %s%% (%s)\n",
             $result->getMemberState(),
-            $result->getVatRate()->getValue()->__toString(),
-            $result->getVatRate()->getType()
+            (string) $result->getRate(),
+            $result->getRate()->getType()
         );
     }
     
@@ -121,15 +121,15 @@ try {
     // Find specific country
     foreach ($results as $result) {
         if ($result->getMemberState() === 'DE') {
-            $vatRate = $result->getVatRate();
+            $vatRate = $result->getRate();
             
             echo "   Germany details:\n";
             echo "     - Country: " . $result->getMemberState() . "\n";
-            echo "     - Rate: " . $vatRate->getValue()->__toString() . "%\n";
+            echo "     - Rate: " . (string) $vatRate . "%\n";
             echo "     - Type: " . $vatRate->getType() . "\n";
             echo "     - Date: " . $result->getSituationOn()->format('Y-m-d') . "\n";
             
-            // Get precise decimal value for calculations
+            // Get precise decimal value for calculations (null for exempt rate types)
             $decimalRate = $vatRate->getValue();
             echo "     - Decimal rate: " . $decimalRate->__toString() . "\n";
             

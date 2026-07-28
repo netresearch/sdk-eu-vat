@@ -233,9 +233,9 @@ class EnterpriseVatService
             foreach ($response->getResults() as $result) {
                 $results[$result->getMemberState()] = [
                     'country' => $result->getMemberState(),
-                    'rate' => $result->getVatRate()->getValue(),
-                    'type' => $result->getVatRate()->getType(),
-                    'decimal_rate' => $result->getVatRate()->getValue(),
+                    'rate' => $result->getRate()->getValue(),
+                    'type' => $result->getRate()->getType(),
+                    'decimal_rate' => $result->getRate()->getValue(),
                     'date' => $result->getSituationOn()->format('Y-m-d'),
                 ];
             }
