@@ -48,7 +48,7 @@ use Throwable;
  * ```php
  * $converter = new DateTypeConverter();
  * $xmlDate = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
- * // Returns: "2024-01-15" (time component stripped)
+ * // Returns: "<date>2024-01-15</date>" (time component stripped)
  * ```
  *
  * @package Netresearch\EuVatSdk\TypeConverter
@@ -199,32 +199,38 @@ final class DateTypeConverter implements TypeConverterInterface
     }
 
     /**
-     * Convert PHP DateTimeInterface to XML date string
+     * Convert PHP DateTimeInterface to XML date element
      *
-     * CRITICAL: Returns ONLY the date part in 'Y-m-d' format.
+     * CRITICAL: The ext-soap typemap contract requires a COMPLETE XML element,
+     * not a bare scalar value. Returning a bare date string causes ext-soap to
+     * serialize an empty element (e.g. <situationOn/>), silently dropping the
+     * date from the request. ext-soap replaces the returned element's name with
+     * the actual element name from the WSDL, so the generic type name is used here.
+     *
+     * CRITICAL: The element content is ONLY the date part in 'Y-m-d' format.
      * Time components are intentionally stripped as required by xsd:date.
      *
      * @param mixed $data DateTimeInterface or date string
-     * @return string XML date string in YYYY-MM-DD format
+     * @return string Complete XML element containing the date in YYYY-MM-DD format
      * @throws ParseException If the input cannot be converted to a date
      *
      * @example
      * ```php
      * $xmlDate = $converter->convertPhpToXml(new DateTime('2024-01-15 14:30:00'));
-     * echo $xmlDate; // "2024-01-15"
+     * echo $xmlDate; // "<date>2024-01-15</date>"
      * ```
      */
     public function convertPhpToXml(mixed $data): string
     {
         if ($data instanceof DateTimeInterface) {
             // CRITICAL: Use 'Y-m-d' format only (no time component)
-            return $data->format('Y-m-d');
+            return $this->wrapInElement($data->format('Y-m-d'));
         }
 
         if (is_string($data)) {
             try {
                 $date = new DateTimeImmutable($data);
-                return $date->format('Y-m-d');
+                return $this->wrapInElement($date->format('Y-m-d'));
             } catch (Throwable $e) {
                 throw new ParseException(
                     sprintf('Failed to parse date string: %s', $data),
@@ -241,5 +247,19 @@ final class DateTypeConverter implements TypeConverterInterface
                 is_scalar($data) ? (string) $data : 'non-scalar'
             )
         );
+    }
+
+    /**
+     * Wrap a formatted date string in the XML element required by the ext-soap typemap
+     *
+     * Mirrors the contract of php-soap/ext-soap-engine's own DateTypeConverter:
+     * sprintf('<%1$s>%2$s</%1$s>', $this->getTypeName(), $formattedDate)
+     *
+     * @param string $formattedDate Date string in YYYY-MM-DD format
+     * @return string Complete XML element (e.g. "<date>2024-01-15</date>")
+     */
+    private function wrapInElement(string $formattedDate): string
+    {
+        return sprintf('<%1$s>%2$s</%1$s>', $this->getTypeName(), $formattedDate);
     }
 }

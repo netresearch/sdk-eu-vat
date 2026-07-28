@@ -63,8 +63,8 @@ class DateTypeConverterTest extends TestCase
         $date = new DateTime('2024-01-15 14:30:00');
         $result = $this->converter->convertPhpToXml($date);
 
-        // Should return only date part, no time
-        $this->assertEquals('2024-01-15', $result);
+        // Should return a complete XML element containing only the date part, no time
+        $this->assertEquals('<date>2024-01-15</date>', $result);
     }
 
     public function testConvertPhpToXmlWithDateTimeImmutable(): void
@@ -72,14 +72,14 @@ class DateTypeConverterTest extends TestCase
         $date = new DateTimeImmutable('2024-01-15 14:30:00');
         $result = $this->converter->convertPhpToXml($date);
 
-        $this->assertEquals('2024-01-15', $result);
+        $this->assertEquals('<date>2024-01-15</date>', $result);
     }
 
     public function testConvertPhpToXmlWithString(): void
     {
         $result = $this->converter->convertPhpToXml('2024-01-15');
 
-        $this->assertEquals('2024-01-15', $result);
+        $this->assertEquals('<date>2024-01-15</date>', $result);
     }
 
     public function testConvertPhpToXmlWithStringIncludingTime(): void
@@ -87,7 +87,53 @@ class DateTypeConverterTest extends TestCase
         $result = $this->converter->convertPhpToXml('2024-01-15 14:30:00');
 
         // Should strip time component
-        $this->assertEquals('2024-01-15', $result);
+        $this->assertEquals('<date>2024-01-15</date>', $result);
+    }
+
+    /**
+     * Regression test: ext-soap typemap to_xml callbacks must return a complete
+     * XML element. A bare date string caused ext-soap to serialize an EMPTY
+     * <situationOn/> element, silently dropping the historical date from requests.
+     */
+    public function testTypemapEncodingPlacesDateInsideSituationOnElement(): void
+    {
+        $converter = $this->converter;
+        $wsdl = dirname(__DIR__, 3) . '/resources/VatRetrievalService.wsdl';
+
+        $client = new class ($wsdl, [
+            'typemap' => [[
+                'type_ns' => $converter->getTypeNamespace(),
+                'type_name' => $converter->getTypeName(),
+                'to_xml' => static fn ($php): string => $converter->convertPhpToXml($php),
+            ]],
+            'location' => 'http://localhost/unused',
+        ]) extends \SoapClient {
+            public string $capturedRequest = '';
+
+            public function __doRequest(
+                string $request,
+                string $location,
+                string $action,
+                int $version,
+                bool $oneWay = false
+            ): ?string {
+                $this->capturedRequest = $request;
+                return '';
+            }
+        };
+
+        try {
+            $client->__soapCall('retrieveVatRates', [[
+                'memberStates' => ['isoCode' => 'DE'],
+                'situationOn' => new DateTimeImmutable('2024-01-15'),
+            ]]);
+        } catch (\Throwable) {
+            // The empty response cannot be decoded - only the encoded request matters here.
+        }
+
+        // Would be "<ns1:situationOn/>" with a bare-string to_xml return value
+        $this->assertStringNotContainsString('<ns1:situationOn/>', $client->capturedRequest);
+        $this->assertStringContainsString('<ns1:situationOn>2024-01-15</ns1:situationOn>', $client->capturedRequest);
     }
 
     public function testConvertPhpToXmlInvalidString(): void
@@ -122,6 +168,10 @@ class DateTypeConverterTest extends TestCase
         $phpDate = $this->converter->convertXmlToPhp($originalDate);
         $xmlDate = $this->converter->convertPhpToXml($phpDate);
 
-        $this->assertEquals($originalDate, $xmlDate);
+        $this->assertEquals('<date>' . $originalDate . '</date>', $xmlDate);
+
+        // The produced element must round-trip back through convertXmlToPhp()
+        $roundTripped = $this->converter->convertXmlToPhp($xmlDate);
+        $this->assertEquals($originalDate, $roundTripped->format('Y-m-d'));
     }
 }
