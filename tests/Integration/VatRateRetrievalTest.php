@@ -219,16 +219,14 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         $response = $this->client->retrieveVatRates($request);
 
-        // Documented current behaviour, NOT a precision guarantee: the wire carries
-        // <value>17.0</value> typed xs:double (VatRetrievalServiceType.xsd declares
-        // rateValueType/value as xs:double), while BigDecimalTypeConverter registers
-        // for xsd:decimal. Its typemap entry therefore never fires, the value reaches
-        // the converter as a PHP float and the trailing zero is lost — getRawValue()
-        // returns "17", not "17.0". These assertions pin that lossy behaviour so the
-        // suite stops advertising a precision guarantee it does not provide; they will
-        // fail loudly once the xs:double/xsd:decimal mismatch is resolved, which is the
-        // point at which the expectations below must be tightened back to "17.0"/"18.0".
-        $rawValuesAsReceived = ['LU' => '17', 'MT' => '18'];
+        // Precision guarantee: the value accessors return exactly the literal the
+        // service put on the wire. The recorded bodies carry <value>17.0</value> for
+        // LU and <value>18.0</value> for MT, so the trailing zero must survive
+        // decoding. BigDecimalTypeConverter registers for xs:double - the type
+        // VatRetrievalServiceType.xsd actually declares for rateValueType/value - and
+        // parses the element text verbatim, so no PHP float ever touches the value.
+        // A regression to a float round-trip would surface here as "17"/"18".
+        $rawValuesAsReceived = ['LU' => '17.0', 'MT' => '18.0'];
 
         foreach ($rawValuesAsReceived as $memberState => $rawValue) {
             $standardResult = $this->findStandardRateResult($response->getResults(), $memberState);
@@ -238,8 +236,8 @@ class VatRateRetrievalTest extends IntegrationTestCase
                 $rawValue,
                 $standardResult->getRate()->getRawValue(),
                 sprintf(
-                    'Raw value for %s reflects the float round-trip caused by the '
-                    . 'xs:double wire type vs. the xsd:decimal type converter registration.',
+                    'Raw value for %s must preserve the scale sent by the service; '
+                    . 'a scale-less value means the xs:double typemap stopped firing.',
                     $memberState
                 )
             );

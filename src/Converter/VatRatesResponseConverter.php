@@ -22,7 +22,7 @@ use stdClass;
  *
  * The converter expects:
  * - DateTypeConverter to have already converted xsd:date to DateTimeInterface
- * - BigDecimalTypeConverter to have already converted xsd:decimal to BigDecimal
+ * - BigDecimalTypeConverter to have already converted xsd:double to BigDecimal
  * - ClassMap to be disabled (we handle all object construction manually)
  *
  * @package Netresearch\EuVatSdk\Converter
@@ -153,9 +153,13 @@ final class VatRatesResponseConverter
                 return new VatRate(type: (string) $type, value: null, category: null);
             }
 
-            // Type check with fallback: Prefer BigDecimal from TypeConverter, fallback for edge cases
+            // Normal path: BigDecimalTypeConverter has already decoded the xs:double
+            // rate value into a BigDecimal, preserving the scale sent on the wire.
+            // The numeric branch below is a genuine fallback for setups where the
+            // typemap is not in effect (e.g. a hand-built engine without the type
+            // converters); it round-trips through a PHP float and therefore loses
+            // trailing zeros, so it must not be relied upon for precision.
             if (!$value instanceof BigDecimal) {
-                // Log when TypeConverter didn't work as expected
                 if (!is_numeric($value)) {
                     throw new ConversionException(
                         sprintf(
@@ -166,7 +170,8 @@ final class VatRatesResponseConverter
                     );
                 }
 
-                // Convert to BigDecimal with a warning in the conversion context
+                // Defensive recovery: the scale is already gone at this point, the
+                // string cast can only reproduce what PHP kept of the float.
                 $value = BigDecimal::of((string) $value);
             }
 

@@ -5,11 +5,11 @@
 [![Latest Stable Version](https://poser.pugx.org/netresearch/sdk-eu-vat/v/stable)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 [![License](https://poser.pugx.org/netresearch/sdk-eu-vat/license)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 
-A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states with precision financial calculations.
+A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states, decoded into arbitrary-precision decimals rather than floats.
 
 ## Features
 
-- 🏦 **Financial-Grade Precision**: Uses `brick/math` BigDecimal for exact VAT calculations
+- 🏦 **Financial-Grade Precision**: Rate values are parsed straight from the XML text into `brick/math` BigDecimal — no PHP float is involved at any point, so the exact literal the service sent (including its scale, e.g. `17.0`) is what you get back
 - 🛡️ **Enterprise Ready**: Comprehensive error handling, logging, and telemetry
 - 🧪 **Thoroughly Tested**: Comprehensive unit and integration test suites with real service validation
 - 🔄 **Modern SOAP**: Built on `php-soap/ext-soap-engine` for reliable SOAP operations
