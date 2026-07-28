@@ -79,7 +79,7 @@ class VatRetrievalClientFactory
      *     $response = $client->retrieveVatRates($request);
      *
      *     foreach ($response->getResults() as $result) {
-     *         echo "Country: {$result->getMemberState()}, Rate: {$result->getVatRate()->getValue()}%\n";
+     *         echo "Country: {$result->getMemberState()}, Rate: {$result->getRate()->getValue()}%\n";
      *     }
      * } catch (VatServiceException $e) {
      *     // Handle SDK-specific errors

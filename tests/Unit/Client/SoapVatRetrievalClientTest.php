@@ -11,6 +11,7 @@ use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
 use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
+use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Exception\UnexpectedResponseException;
@@ -138,6 +139,44 @@ class SoapVatRetrievalClientTest extends TestCase
         $this->expectExceptionMessage('Unknown fault');
 
         $client->retrieveVatRates($request);
+    }
+
+    public function testRetrieveVatRatesMapsTedbFaultToInvalidRequestException(): void
+    {
+        $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
+        $soapFault = new \SoapFault('TEDB-101', 'Invalid country code');
+
+        $mockEngine = $this->createMock(Engine::class);
+        $mockEngine->expects($this->once())
+            ->method('request')
+            ->willThrowException($soapFault);
+
+        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage('Invalid country code provided (TEDB-101): Invalid country code');
+
+        $client->retrieveVatRates($request);
+    }
+
+    public function testRetrieveVatRatesLetsDomainExceptionsPropagateUnwrapped(): void
+    {
+        $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
+        $domainException = new InvalidRequestException('Invalid request data', 'TEDB-101');
+
+        $mockEngine = $this->createMock(Engine::class);
+        $mockEngine->expects($this->once())
+            ->method('request')
+            ->willThrowException($domainException);
+
+        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+
+        try {
+            $client->retrieveVatRates($request);
+            $this->fail('Expected InvalidRequestException to be thrown');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame($domainException, $e, 'Domain exception must propagate unwrapped');
+        }
     }
 
     public function testConstructorThrowsConfigurationExceptionOnInvalidWsdl(): void

@@ -203,9 +203,8 @@ final class FaultEventListener implements EventSubscriberInterface
 
         // If detail is a string, try to parse as XML
         if (is_string($faultDetail)) {
-            // Protect against XXE attacks by disabling external entity loading
+            // External entity loading is disabled by default since PHP 8.0 (XXE protection)
             $previousUseErrors = libxml_use_internal_errors(true);
-            $previousEntityLoader = libxml_disable_entity_loader(true);
             $dom = new DOMDocument();
             $xmlParsed = false;
 
@@ -214,7 +213,7 @@ final class FaultEventListener implements EventSubscriberInterface
                 $xmlParsed = $dom->loadXML($faultDetail);
             } finally {
                 // Always restore previous settings, even if an exception occurs
-                libxml_disable_entity_loader($previousEntityLoader);
+                libxml_use_internal_errors($previousUseErrors);
             }
 
             if ($xmlParsed) {
@@ -224,11 +223,8 @@ final class FaultEventListener implements EventSubscriberInterface
                     $details['element_name'] = $dom->documentElement->nodeName;
                     $details['text_content'] = trim($dom->documentElement->textContent);
                 }
-                libxml_use_internal_errors($previousUseErrors);
                 return $details;
             }
-
-            libxml_use_internal_errors($previousUseErrors);
 
             // Not valid XML, return as plain text
             return ['raw_detail' => $faultDetail];

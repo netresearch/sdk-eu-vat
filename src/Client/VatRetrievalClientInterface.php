@@ -11,6 +11,7 @@ use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
+use Netresearch\EuVatSdk\Exception\ValidationException;
 
 /**
  * Main interface for retrieving VAT rates from the EU VAT Retrieval Service
@@ -27,7 +28,7 @@ use Netresearch\EuVatSdk\Exception\ConfigurationException;
  * $response = $client->retrieveVatRates($request);
  *
  * foreach ($response->getResults() as $result) {
- *     echo $result->getMemberState() . ': ' . $result->getVatRate()->getValue() . '%' . PHP_EOL;
+ *     echo $result->getMemberState() . ': ' . $result->getRate()->getValue() . '%' . PHP_EOL;
  * }
  * ```
  *
@@ -65,6 +66,10 @@ interface VatRetrievalClientInterface
      *
      * @param VatRatesRequest $request Request containing member states and situation date
      * @return VatRatesResponse Response containing VAT rates for all requested member states
+     *
+     * @throws ValidationException When local request construction/validation fails:
+     *         - Empty member states array detected before any service call
+     *         - Invalid data supplied to VatRatesRequest
      *
      * @throws InvalidRequestException When request validation fails:
      *         - Invalid country codes (non-EU members, malformed codes)
@@ -105,8 +110,8 @@ interface VatRetrievalClientInterface
      *     printf(
      *         '%s: %s%% (%s rate)\n',
      *         $result->getMemberState(),
-     *         $result->getVatRate()->getValue(),
-     *         $result->getVatRate()->getType()
+     *         $result->getRate()->getValue(),
+     *         $result->getRate()->getType()
      *     );
      * }
      * ```

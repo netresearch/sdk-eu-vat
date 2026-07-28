@@ -12,7 +12,6 @@ use Netresearch\EuVatSdk\Exception\VatServiceException;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Exception\UnexpectedResponseException;
-use Netresearch\EuVatSdk\Exception\ConversionException;
 use Netresearch\EuVatSdk\TypeConverter\DateTypeConverter;
 use Netresearch\EuVatSdk\TypeConverter\BigDecimalTypeConverter;
 use Netresearch\EuVatSdk\Converter\VatRatesResponseConverter;
@@ -29,6 +28,7 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Netresearch\EuVatSdk\Engine\EventAwareEngine;
 use Netresearch\EuVatSdk\Engine\MiddlewareEngine;
+use Netresearch\EuVatSdk\EventListener\FaultEventListener;
 
 /**
  * SOAP client implementation for EU VAT Retrieval Service
@@ -86,6 +86,11 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      */
     private readonly LoggerInterface $logger;
 
+    /**
+     * Fault listener providing the documented TEDB fault-code to exception mapping
+     */
+    private readonly FaultEventListener $faultListener;
+
 
     /**
      * Create SOAP client with configuration
@@ -101,6 +106,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
         private readonly VatRatesResponseConverter $responseConverter = new VatRatesResponseConverter()
     ) {
         $this->logger = $this->config->logger ?? new NullLogger();
+        $this->faultListener = new FaultEventListener($this->logger);
         $this->engine = $engine ?? $this->initializeEngine();
     }
 
@@ -153,7 +159,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
 
             return $this->responseConverter->convert($responseObject);
         } catch (\SoapFault $fault) {
-            // FaultEventListener should have already handled this, but as a fallback
+            // Delegate the documented TEDB fault-code mapping (always throws a domain exception)
+            $this->faultListener->handleSoapFault($fault);
+
+            // Unreachable fallback in case handleSoapFault ever returns without throwing
             throw new SoapFaultException(
                 $fault->getMessage(),
                 $fault->faultcode ?? 'UNKNOWN',
@@ -166,8 +175,8 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 null, // errorCode should be null for network errors
                 $e
             );
-        } catch (ConversionException $e) {
-            // Let ConversionException pass through - it's a domain exception
+        } catch (VatServiceException $e) {
+            // Let all SDK domain exceptions pass through unwrapped
             throw $e;
         } catch (\Throwable $e) {
             // Catch any other unexpected errors and wrap them for a consistent API.

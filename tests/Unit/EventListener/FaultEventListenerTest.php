@@ -196,6 +196,38 @@ class FaultEventListenerTest extends TestCase
         $this->assertEquals(['raw_detail' => 'This is not XML'], $details);
     }
 
+    public function testExtractErrorDetailsDoesNotTriggerDeprecations(): void
+    {
+        $deprecations = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$deprecations): bool {
+            $deprecations[] = $errstr;
+            return true;
+        }, E_DEPRECATED | E_USER_DEPRECATED);
+
+        try {
+            $this->listener->extractErrorDetails('<error><code>TEDB-100</code></error>');
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $deprecations);
+    }
+
+    public function testExtractErrorDetailsRestoresLibxmlErrorHandling(): void
+    {
+        $previous = libxml_use_internal_errors(false);
+
+        try {
+            $this->listener->extractErrorDetails('not valid <<< xml');
+            $this->assertFalse(
+                libxml_use_internal_errors(),
+                'libxml_use_internal_errors state must be restored after parsing'
+            );
+        } finally {
+            libxml_use_internal_errors($previous);
+        }
+    }
+
     public function testExtractErrorDetailsWithNonStringType(): void
     {
         $details = $this->listener->extractErrorDetails(123);
