@@ -24,9 +24,27 @@ code, so the next release is a major version. Read "Breaking changes" before upg
 - **Different exception types leave `retrieveVatRates()`.** SOAP faults the service
   attributes to the caller now surface as `InvalidRequestException`, and faults it
   attributes to itself as `ServiceUnavailableException`, where both previously
-  surfaced as `SoapFaultException`. `ConversionException`, `ParseException` and
-  `ConfigurationException` now propagate unchanged instead of being wrapped in
-  `UnexpectedResponseException`. Existing `catch` blocks may no longer match.
+  surfaced as `SoapFaultException`. Every SDK exception raised while converting a
+  response — including `ConversionException`, `ParseException`, `ValidationException`
+  and `UnexpectedResponseException` — now propagates unchanged rather than being
+  wrapped in `UnexpectedResponseException`, because the client catches the
+  `VatServiceException` base class. Existing `catch` blocks may no longer match.
+- **Failures that never reached the service are reported as such.** ext-soap raises
+  local errors (a proxy or error page returning non-XML, a truncated response, a
+  serialization error) with a bare `Client` fault code, which is indistinguishable
+  from a service rejection by code alone. These now raise `ServiceUnavailableException`,
+  which callers may retry, instead of `InvalidRequestException` telling them their
+  input was wrong. A fault only counts as a service rejection when it carries a
+  namespace-prefixed code or a TEDB identifier.
+- **`FaultEventListener::extractErrorDetails()` was removed.** It had no caller inside
+  the SDK; fault details are collected while the exception is built.
+- **`getResults()` returns one entry per rate type and member state.** The service
+  answers a single-country query with every rate it publishes for that country, so a
+  request for one member state commonly yields dozens of results. Code assuming one
+  result per country — `$results[0]`, or an array keyed by member state — silently
+  used an arbitrary rate. Select on `VatRate::isStandard()` or `getType()`, or use
+  `VatRatesResponse::getResultsForCountry()`. This behaviour is unchanged; it was
+  always the case and is documented here because the SDK's own examples got it wrong.
 - **The documented TEDB fault codes were fictional.** `TEDB-100`, `TEDB-101`,
   `TEDB-102` and `TEDB-400` appear in no service response, WSDL or schema; they
   existed only in this SDK's own documentation and were never produced. The service
@@ -34,6 +52,22 @@ code, so the next release is a major version. Read "Breaking changes" before upg
   `faultstring`. Code branching on the old constants never matched and must be
   rewritten against `getErrorCode()`, which now returns the real code, or `null`
   when the fault string carries none.
+- **Rate value accessors preserve the scale sent by the service.** `getRawValue()`
+  and `(string) $rate->getValue()` return `"17.0"` where they previously returned
+  `"17"`. `BigDecimalTypeConverter` registered for `xsd:decimal`, a type no schema in
+  `resources/` uses, so its typemap entry never matched: ext-soap decoded the
+  `xs:double` rate value into a PHP float and the trailing zero was lost. It now
+  registers for `xsd:double` and parses the element text verbatim. String comparisons
+  and array keys built from these accessors change; numeric comparisons do not.
+- **`BigDecimalTypeConverter` no longer range-checks values.** Values outside the
+  former -10..100 window are returned instead of raising `ParseException`. The check
+  ran on a `toFloat()` round-trip and would have aborted an entire multi-member-state
+  response over one implausible rate; plausibility is the caller's decision.
+- **`BigDecimalTypeConverter::convertPhpToXml()` returns a complete XML element**
+  (`<double>19.75</double>`) instead of a bare numeric string, and
+  `convertXmlToPhp()` accepts the complete element ext-soap passes and returns `null`
+  for an empty one. This class is public; code reusing it in a custom typemap or
+  asserting on its return value is affected.
 - **`DateTypeConverter::convertPhpToXml()` returns a complete XML element**
   (`<date>2024-01-15</date>`) instead of a bare date string, as the ext-soap typemap
   contract requires. This class is public; code reusing it in a custom typemap or

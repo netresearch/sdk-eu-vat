@@ -39,10 +39,13 @@ $client = VatRetrievalClientFactory::create(
 // Example 1: Process all EU member states
 echo "1. Retrieving VAT rates for all EU member states:\n";
 
-// All EU member states as of 2024
+// All EU member states as of 2024.
+// Note the service's own codes, which differ from ISO 3166-1 alpha-2 in one place:
+// Greece is 'EL', not 'GR'. A single unknown code makes the service reject the
+// entire batch with TEDB-ERR-2, and the SDK only validates the two-letter shape.
 $allEuMembers = [
     'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
-    'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
+    'DE', 'EL', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
     'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
 ];
 
