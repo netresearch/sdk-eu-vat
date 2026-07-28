@@ -77,10 +77,12 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Member states array cannot be empty');
 
-        new VatRatesRequest(
+        $request = new VatRatesRequest(
             memberStates: [],
             situationOn: new DateTime('2024-01-01')
         );
+
+        self::fail(sprintf('Expected ValidationException, got %s', $request::class));
     }
 
     /**
@@ -97,10 +99,12 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Date cannot be more than 5 years in the future');
 
-        new VatRatesRequest(
+        $request = new VatRatesRequest(
             memberStates: ['DE'],
             situationOn: new DateTime('+10 years')
         );
+
+        self::fail(sprintf('Expected ValidationException, got %s', $request::class));
     }
 
     /**
