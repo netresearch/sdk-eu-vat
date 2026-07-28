@@ -32,6 +32,13 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  * echo $vatAmount; // "19.00"
  * ```
  *
+ * @example Exempt rate without a value (the service omits the value element):
+ * ```php
+ * $rate = new VatRate('EXEMPTED', null);
+ * echo $rate->isExempt(); // true
+ * var_dump($rate->getValue()); // NULL
+ * ```
+ *
  * @example With category information:
  * ```php
  * $rate = new VatRate('REDUCED', '7.0', 'FOODSTUFFS');
@@ -49,12 +56,14 @@ final class VatRate implements \Stringable
 
     /**
      * @param string      $type     VAT rate type (e.g., 'STANDARD', 'REDUCED', 'REDUCED[1]').
-     * @param string      $value    Percentage value as string (e.g., "19.0").
+     * @param string|null $value    Percentage value as string (e.g., "19.0"), or null when the
+     *                              service provides no value (exempt/out-of-scope rate types —
+     *                              the XSD declares the value element with minOccurs="0").
      * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS').
      */
     public function __construct(
         private readonly string $type,
-        private readonly string $value,
+        private readonly ?string $value,
         private readonly ?string $category = null
     ) {
     }
@@ -73,11 +82,18 @@ final class VatRate implements \Stringable
     /**
      * Get the VAT rate as a BigDecimal for precise calculations
      *
-     * @return BigDecimal The VAT rate as a BigDecimal instance
+     * Returns null when the service provided no value for this rate, which is
+     * legitimate for exempt/out-of-scope rate types (see isExempt()).
+     *
+     * @return BigDecimal|null The VAT rate as a BigDecimal instance, or null if no value was provided
      * @throws ParseException If the value cannot be parsed as a decimal
      */
-    public function getValue(): BigDecimal
+    public function getValue(): ?BigDecimal
     {
+        if ($this->value === null) {
+            return null;
+        }
+
         if (!$this->decimalValue instanceof BigDecimal) {
             try {
                 $this->decimalValue = BigDecimal::of($this->value);
@@ -97,9 +113,9 @@ final class VatRate implements \Stringable
      * Get the value as a BigDecimal for precise calculations
      *
      * @deprecated Use getValue() instead
-     * @return BigDecimal The VAT rate as a BigDecimal instance
+     * @return BigDecimal|null The VAT rate as a BigDecimal instance, or null if no value was provided
      */
-    public function getDecimalValue(): BigDecimal
+    public function getDecimalValue(): ?BigDecimal
     {
         return $this->getValue();
     }
@@ -107,9 +123,10 @@ final class VatRate implements \Stringable
     /**
      * Get the raw string value as received from the API
      *
-     * @return string The VAT rate percentage as a string (e.g., "19.0")
+     * @return string|null The VAT rate percentage as a string (e.g., "19.0"),
+     *                     or null if no value was provided (exempt/out-of-scope rates)
      */
-    public function getRawValue(): string
+    public function getRawValue(): ?string
     {
         return $this->value;
     }
@@ -118,11 +135,11 @@ final class VatRate implements \Stringable
      * Get the value as float (use with caution for calculations)
      *
      * @deprecated Since 1.0.0, use getValue() for precise calculations
-     * @return float The VAT rate as a floating-point number
+     * @return float|null The VAT rate as a floating-point number, or null if no value was provided
      */
-    public function getValueAsFloat(): float
+    public function getValueAsFloat(): ?float
     {
-        return $this->getValue()->toFloat();
+        return $this->getValue()?->toFloat();
     }
 
     /**
@@ -206,10 +223,10 @@ final class VatRate implements \Stringable
     /**
      * String representation of the VAT rate
      *
-     * @return string The VAT rate percentage as a string
+     * @return string The VAT rate percentage as a string, or an empty string if no value was provided
      */
     public function __toString(): string
     {
-        return $this->getRawValue();
+        return $this->getRawValue() ?? '';
     }
 }

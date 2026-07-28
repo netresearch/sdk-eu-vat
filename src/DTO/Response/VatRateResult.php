@@ -73,6 +73,9 @@ final class VatRateResult
     /**
      * Get the VAT rate
      *
+     * Note: for exempt/out-of-scope rate types the returned VatRate may carry
+     * no percentage value — its getValue() returns null (see VatRate::isExempt()).
+     *
      * @return VatRate The VAT rate information
      */
     public function getRate(): VatRate

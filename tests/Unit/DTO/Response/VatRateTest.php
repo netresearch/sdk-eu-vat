@@ -127,6 +127,18 @@ class VatRateTest extends TestCase
         $this->assertFalse($rate5->isZeroRate());
     }
 
+    public function testExemptRateWithoutValue(): void
+    {
+        $rate = new VatRate('EXEMPTED', null);
+
+        $this->assertTrue($rate->isExempt());
+        $this->assertNull($rate->getValue());
+        $this->assertNull($rate->getDecimalValue());
+        $this->assertNull($rate->getRawValue());
+        $this->assertNull($rate->getValueAsFloat());
+        $this->assertEquals('', (string) $rate);
+    }
+
     public function testNormalizesTypeToUppercase(): void
     {
         $rate = new VatRate('standard', '19.0');
@@ -153,12 +165,14 @@ class VatRateTest extends TestCase
     {
         $rate = new VatRate('STANDARD', '19.75');
 
+        $decimalValue = $rate->getDecimalValue();
+        $this->assertInstanceOf(BigDecimal::class, $decimalValue);
         $this->assertEquals('19.75', $rate->getValue());
-        $this->assertEquals('19.75', $rate->getDecimalValue()->__toString());
+        $this->assertEquals('19.75', $decimalValue->__toString());
 
         // Test calculation precision
         $amount = BigDecimal::of('100.00');
-        $vatAmount = $amount->multipliedBy($rate->getDecimalValue())->dividedBy(100, 2);
+        $vatAmount = $amount->multipliedBy($decimalValue)->dividedBy(100, 2);
         $this->assertEquals('19.75', $vatAmount->__toString());
     }
 

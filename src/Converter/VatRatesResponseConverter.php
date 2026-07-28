@@ -142,8 +142,20 @@ final class VatRatesResponseConverter
         try {
             $type = $rateData->type
                 ?? throw new ConversionException('Missing "type" for VAT rate.');
-            $value = $rateData->value
-                ?? throw new ConversionException('Missing "value" for VAT rate.');
+            $value = $rateData->value ?? null;
+
+            // The XSD declares the rate "value" element with minOccurs="0":
+            // exempt/out-of-scope rate types legitimately arrive without a value.
+            if ($value === null) {
+                $vatRate = new VatRate(type: (string) $type, value: null, category: null);
+                if (!$vatRate->isExempt()) {
+                    throw new ConversionException(
+                        sprintf('Missing "value" for VAT rate of type "%s".', (string) $type)
+                    );
+                }
+
+                return $vatRate;
+            }
 
             // Type check with fallback: Prefer BigDecimal from TypeConverter, fallback for edge cases
             if (!$value instanceof BigDecimal) {
