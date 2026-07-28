@@ -23,11 +23,15 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->skip([
         __DIR__ . '/vendor',
         __DIR__ . '/tests/fixtures/cassettes',
+
+        // Promoting classes to `readonly` is a BC break for consumers that
+        // extend or mock them, so leave the class-level modifier alone.
+        \Rector\Php82\Rector\Class_\ReadOnlyClassRector::class,
     ]);
 
     // PHP version and sets
     $rectorConfig->sets([
-        LevelSetList::UP_TO_PHP_81,
+        LevelSetList::UP_TO_PHP_82,
         SetList::CODE_QUALITY,
         SetList::DEAD_CODE,
         SetList::TYPE_DECLARATION,
