@@ -1,7 +1,7 @@
 [{
     "request": {
         "method": "POST",
-        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService",
+        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService-ACC",
         "headers": {
             "Host": "ec.europa.eu",
             "Content-Type": "text\/xml; charset=utf-8",
@@ -15,7 +15,7 @@
             "message": "OK"
         },
         "headers": {
-            "Date": "Tue, 28 Jul 2026 10:08:30 GMT",
+            "Date": "Tue, 28 Jul 2026 10:09:12 GMT",
             "Content-Length": "57212",
             "Content-Type": "text\/xml; charset=UTF-8",
             "Accept": "text\/xml",

@@ -1,13 +1,13 @@
 [{
     "request": {
         "method": "POST",
-        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService",
+        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService-ACC",
         "headers": {
             "Host": "ec.europa.eu",
             "Content-Type": "text\/xml; charset=utf-8",
             "SOAPAction": "urn:ec.europa.eu:taxud:tedb:services:v1:VatRetrievalService\/RetrieveVatRates"
         },
-        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\" xmlns:ns1=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><SOAP-ENV:Body><ns2:retrieveVatRatesReqMsg><ns1:memberStates><ns1:isoCode>XX<\/ns1:isoCode><ns1:isoCode>YY<\/ns1:isoCode><\/ns1:memberStates><ns1:situationOn>2024-01-01<\/ns1:situationOn><\/ns2:retrieveVatRatesReqMsg><\/SOAP-ENV:Body><\/SOAP-ENV:Envelope>\n"
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\" xmlns:ns1=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><SOAP-ENV:Body><ns2:retrieveVatRatesReqMsg><ns1:memberStates><ns1:isoCode>DE<\/ns1:isoCode><ns1:isoCode>XX<\/ns1:isoCode><ns1:isoCode>FR<\/ns1:isoCode><ns1:isoCode>YY<\/ns1:isoCode><\/ns1:memberStates><ns1:situationOn>2024-01-01<\/ns1:situationOn><\/ns2:retrieveVatRatesReqMsg><\/SOAP-ENV:Body><\/SOAP-ENV:Envelope>\n"
     },
     "response": {
         "status": {
@@ -15,7 +15,7 @@
             "message": "Internal Server Error"
         },
         "headers": {
-            "Date": "Tue, 28 Jul 2026 10:08:31 GMT",
+            "Date": "Tue, 28 Jul 2026 10:59:23 GMT",
             "Content-Length": "705",
             "Content-Type": "text\/xml; charset=UTF-8",
             "Accept": "text\/xml",

@@ -1,0 +1,32 @@
+[{
+    "request": {
+        "method": "POST",
+        "url": "https:\/\/ec.europa.eu\/taxation_customs\/tedb\/ws\/VatRetrievalService-ACC",
+        "headers": {
+            "Host": "ec.europa.eu",
+            "Content-Type": "text\/xml; charset=utf-8",
+            "SOAPAction": "urn:ec.europa.eu:taxud:tedb:services:v1:VatRetrievalService\/RetrieveVatRates"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\" xmlns:ns1=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><SOAP-ENV:Body><ns2:retrieveVatRatesReqMsg><ns1:memberStates><ns1:isoCode>US<\/ns1:isoCode><ns1:isoCode>CN<\/ns1:isoCode><ns1:isoCode>JP<\/ns1:isoCode><\/ns1:memberStates><ns1:situationOn>2024-01-01<\/ns1:situationOn><\/ns2:retrieveVatRatesReqMsg><\/SOAP-ENV:Body><\/SOAP-ENV:Envelope>\n"
+    },
+    "response": {
+        "status": {
+            "code": 500,
+            "message": "Internal Server Error"
+        },
+        "headers": {
+            "Date": "Tue, 28 Jul 2026 10:59:23 GMT",
+            "Content-Length": "826",
+            "Content-Type": "text\/xml; charset=UTF-8",
+            "Accept": "text\/xml",
+            "Access-Control-Allow-Credentials": "true",
+            "SOAPAction": "\"\"",
+            "Access-Control-Allow-Origin": "http:\/\/localhost:4200",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Server": "Europa",
+            "Connection": "keep-alive"
+        },
+        "body": "<env:Envelope xmlns:env=\"http:\/\/schemas.xmlsoap.org\/soap\/envelope\/\"><env:Header\/><env:Body><env:Fault><faultcode>env:Client<\/faultcode><faultstring>TEDB-ERR-2 - Request is not valid<\/faultstring><detail><ns2:retrieveVatRatesFaultMsg xmlns:ns0=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types\" xmlns:ns2=\"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService\"><ns0:error><ns0:code>00002<\/ns0:code><ns0:description>The Member State \"US\" does not exist.<\/ns0:description><\/ns0:error><ns0:error><ns0:code>00002<\/ns0:code><ns0:description>The Member State \"CN\" does not exist.<\/ns0:description><\/ns0:error><ns0:error><ns0:code>00002<\/ns0:code><ns0:description>The Member State \"JP\" does not exist.<\/ns0:description><\/ns0:error><\/ns2:retrieveVatRatesFaultMsg><\/detail><\/env:Fault><\/env:Body><\/env:Envelope>"
+    },
+    "index": 0
+}]

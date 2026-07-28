@@ -23,22 +23,14 @@ VCR::configure()
     // Set the storage format to JSON for better readability
     ->setStorage('json')
 
-    // Enable request matching by method, URL, and body
+    // Replay existing cassettes; only record when a cassette does not exist yet
     ->setMode('once')
 
-    // Configure request matching rules
+    // Configure request matching rules. The SOAP envelope in the body already
+    // encodes the operation and its arguments, so method + URL + body uniquely
+    // identifies a request. php-vcr also ships a built-in 'soap_operation'
+    // matcher should finer-grained matching ever be needed.
     ->enableRequestMatchers(['method', 'url', 'body'])
 
-    // Configure SOAP-specific settings
-    ->addRequestMatcher(
-        'soap_action',
-        function ($request1, $request2): bool {
-            // Match SOAP action headers
-            $action1 = $request1->getHeader('SOAPAction')[0] ?? '';
-            $action2 = $request2->getHeader('SOAPAction')[0] ?? '';
-            return $action1 === $action2;
-        }
-    )
-    
     // Enable library hooks for SOAP and cURL recording
     ->enableLibraryHooks(['curl', 'soap']);

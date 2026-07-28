@@ -41,9 +41,14 @@ dist/
 # Logs
 *.log
 
-# Testing  
+# Testing
+# Cassettes are committed so the integration and network suites replay offline on a
+# fresh clone. Ignore stray/scratch recordings, but track the ones the suites need.
 tests/fixtures/cassettes/*
 !tests/fixtures/cassettes/.gitkeep
+!tests/fixtures/cassettes/e2e-*
+!tests/fixtures/cassettes/error-*
+!tests/fixtures/cassettes/vat-rates-*
 
 # Temporary files
 *.tmp
