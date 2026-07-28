@@ -34,7 +34,7 @@
         "squizlabs/php_codesniffer": "^3.7",
         "slevomat/coding-standard": "^8.0",
         "rector/rector": "^1.0",
-        "php-vcr/php-vcr": "^1.5",
+        "php-vcr/php-vcr": ">=1.6.4 <1.8.2",
         "phpmd/phpmd": "^2.13"
     },
     "autoload": {

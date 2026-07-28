@@ -7,6 +7,7 @@ namespace Netresearch\EuVatSdk\Tests\Integration;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
+use Netresearch\EuVatSdk\Client\VatRetrievalClientInterface;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Brick\Math\RoundingMode;
 use Netresearch\EuVatSdk\Factory\VatRetrievalClientFactory;
@@ -349,20 +350,22 @@ class EndToEndTest extends IntegrationTestCase
     {
         $this->setupVcr('e2e-soap-optimizations');
 
-        // Test WSDL caching
-        $startTime = microtime(true);
+        // WSDL caching is what keeps repeated client creation cheap, so assert the
+        // option itself rather than comparing wall-clock times: client construction
+        // is lazy and both creations land within measurement noise of each other.
+        $this->assertSame(
+            WSDL_CACHE_DISK,
+            ClientConfiguration::production()->soapOptions['cache_wsdl'],
+            'WSDL disk caching should be enabled by default'
+        );
 
-        // First client creation (might load WSDL)
+        // Repeated creation must keep working once the WSDL cache is populated
         VatRetrievalClientFactory::create();
-        $time1 = microtime(true) - $startTime;
-
-        // Second client creation (should use cached WSDL)
-        $startTime = microtime(true);
-        VatRetrievalClientFactory::create();
-        $time2 = microtime(true) - $startTime;
-
-        // Second creation should be faster due to caching
-        $this->assertLessThan($time1, $time2, 'Second client creation should be faster due to WSDL caching');
+        $this->assertInstanceOf(
+            VatRetrievalClientInterface::class,
+            VatRetrievalClientFactory::create(),
+            'Client creation should succeed against the cached WSDL'
+        );
 
         // Test compression
         $config = ClientConfiguration::production()
