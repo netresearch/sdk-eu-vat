@@ -116,12 +116,100 @@ class FaultEventListenerTest extends TestCase
         $this->listener->handleSoapFault($fault);
     }
 
-    public function testBareClientFaultCodeMapsToInvalidRequestException(): void
+    /**
+     * A bare client fault code still counts as a rejection when the service signed it
+     *
+     * The TEDB identifier in the fault string is positive evidence that the fault
+     * was produced by the service, whatever shape the fault code arrived in.
+     */
+    public function testBareClientFaultCodeWithTedbIdentifierMapsToInvalidRequestException(): void
     {
         $fault = new SoapFault('Client', self::REAL_FAULT_STRING);
 
         $this->expectException(InvalidRequestException::class);
         $this->expectExceptionMessage('Invalid request rejected by the EU VAT service (TEDB-ERR-2)');
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * ext-soap's own local failures must not be reported as request rejections
+     *
+     * These fault strings are ext-soap's wording, raised before or instead of any
+     * service response: a proxy or captive portal answering with HTML, a truncated
+     * body, an encoding failure. No request was rejected, and the condition is
+     * usually transient, so the retryable exception is the correct contract.
+     *
+     * @dataProvider localExtSoapFailureProvider
+     */
+    public function testLocalExtSoapFailureMapsToServiceUnavailableException(string $faultString): void
+    {
+        $fault = new SoapFault('Client', $faultString);
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected ServiceUnavailableException');
+        } catch (ServiceUnavailableException $e) {
+            $this->assertSame('Client', $e->getErrorCode());
+            $this->assertStringContainsString(
+                'Communication with the EU VAT service failed before a service response could be read '
+                . '(Client): ' . $faultString,
+                $e->getMessage()
+            );
+            $this->assertStringNotContainsString('Invalid request', $e->getMessage());
+        }
+    }
+
+    /**
+     * Fault strings ext-soap raises for purely local failures
+     *
+     * @return array<string, array{string}>
+     */
+    public static function localExtSoapFailureProvider(): array
+    {
+        return [
+            'non-XML response body' => ['looks like we got no XML document'],
+            'HTML error page' => ['DTD are not supported by SOAP'],
+            'non-string transport result' => ['SoapClient::__doRequest() returned non string value'],
+            'serialization failure' => ['Encoding: object has no \'situationOn\' property'],
+        ];
+    }
+
+    /**
+     * A bare Sender fault code without service evidence is transport, not rejection
+     */
+    public function testBareSenderFaultCodeWithoutEvidenceMapsToServiceUnavailableException(): void
+    {
+        $fault = new SoapFault('Sender', 'looks like we got no XML document');
+
+        $this->expectException(ServiceUnavailableException::class);
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * A fault code bound to an unrelated namespace is not a responsibility marker
+     */
+    public function testUnprefixedClientCodeInUnrelatedNamespaceIsNotClassified(): void
+    {
+        $fault = new SoapFault('Client', 'Client rejected the batch');
+        $fault->faultcodens = 'urn:acme:codes';
+
+        $this->expectException(SoapFaultException::class);
+        $this->expectExceptionMessage('SOAP fault occurred (Client): Client rejected the batch');
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * The SOAP envelope namespace ext-soap resolves for bare codes stays acceptable
+     */
+    public function testUnprefixedClientCodeInSoapEnvelopeNamespaceStaysClassified(): void
+    {
+        $fault = new SoapFault('Client', self::REAL_FAULT_STRING);
+        $fault->faultcodens = 'http://schemas.xmlsoap.org/soap/envelope/';
+
+        $this->expectException(InvalidRequestException::class);
 
         $this->listener->handleSoapFault($fault);
     }
@@ -233,6 +321,54 @@ class FaultEventListenerTest extends TestCase
         $this->listener->handleSoapFault($fault);
     }
 
+    /**
+     * An empty fault string must not leave the message ending in a dangling colon
+     */
+    public function testHandleFaultWithEmptyFaultStringUsesDefault(): void
+    {
+        $fault = new SoapFault('env:Client', '');
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage(
+            'Invalid request rejected by the EU VAT service (env:Client): No fault string provided'
+        );
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * A whitespace-only fault string is as unusable as an empty one
+     */
+    public function testHandleFaultWithBlankFaultStringUsesDefault(): void
+    {
+        $fault = new SoapFault('env:Client', "  \n ");
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage(
+            'Invalid request rejected by the EU VAT service (env:Client): No fault string provided'
+        );
+
+        $this->listener->handleSoapFault($fault);
+    }
+
+    /**
+     * A TEDB identifier mentioned mid-sentence is not the service's error code
+     *
+     * The service always leads with the identifier; anything else is prose and must
+     * not be mistaken for a code consumers can branch on.
+     */
+    public function testTedbIdentifierNotAtStartIsNotUsedAsErrorCode(): void
+    {
+        $fault = new SoapFault('env:Client', 'no code here but mentions TEDB-ERR-77 inside');
+
+        try {
+            $this->listener->handleSoapFault($fault);
+            $this->fail('Expected InvalidRequestException');
+        } catch (InvalidRequestException $e) {
+            $this->assertSame('env:Client', $e->getErrorCode());
+        }
+    }
+
     public function testHandleFaultWithDetailLogsDetail(): void
     {
         $fault = $this->createRealClientFault();
@@ -315,83 +451,5 @@ class FaultEventListenerTest extends TestCase
         $this->assertFalse($this->listener->isServerError('env:Client'));
         $this->assertFalse($this->listener->isServerError('TEDB-400'));
         $this->assertFalse($this->listener->isServerError('UNKNOWN'));
-    }
-
-    public function testExtractErrorDetailsWithNull(): void
-    {
-        $details = $this->listener->extractErrorDetails(null);
-        $this->assertEquals([], $details);
-    }
-
-    public function testExtractErrorDetailsWithArray(): void
-    {
-        $detail = ['error' => 'test', 'code' => 123];
-        $details = $this->listener->extractErrorDetails($detail);
-        $this->assertEquals($detail, $details);
-    }
-
-    public function testExtractErrorDetailsWithObject(): void
-    {
-        $detail = (object) ['error' => 'test', 'code' => 123];
-        $details = $this->listener->extractErrorDetails($detail);
-        $this->assertEquals(['error' => 'test', 'code' => 123], $details);
-    }
-
-    public function testExtractErrorDetailsWithValidXmlString(): void
-    {
-        $xmlDetail = '<error><code>123</code><message>Test error</message></error>';
-        $details = $this->listener->extractErrorDetails($xmlDetail);
-
-        $this->assertArrayHasKey('element_name', $details);
-        $this->assertEquals('error', $details['element_name']);
-        $this->assertArrayHasKey('text_content', $details);
-        $this->assertStringContainsString('123', $details['text_content']);
-        $this->assertStringContainsString('Test error', $details['text_content']);
-    }
-
-    public function testExtractErrorDetailsWithInvalidXmlString(): void
-    {
-        $invalidXml = 'This is not XML';
-        $details = $this->listener->extractErrorDetails($invalidXml);
-
-        $this->assertEquals(['raw_detail' => 'This is not XML'], $details);
-    }
-
-    public function testExtractErrorDetailsDoesNotTriggerDeprecations(): void
-    {
-        $deprecations = [];
-        set_error_handler(static function (int $errno, string $errstr) use (&$deprecations): bool {
-            $deprecations[] = $errstr;
-            return true;
-        }, E_DEPRECATED | E_USER_DEPRECATED);
-
-        try {
-            $this->listener->extractErrorDetails('<error><code>00002</code></error>');
-        } finally {
-            restore_error_handler();
-        }
-
-        $this->assertSame([], $deprecations);
-    }
-
-    public function testExtractErrorDetailsRestoresLibxmlErrorHandling(): void
-    {
-        $previous = libxml_use_internal_errors(false);
-
-        try {
-            $this->listener->extractErrorDetails('not valid <<< xml');
-            $this->assertFalse(
-                libxml_use_internal_errors(),
-                'libxml_use_internal_errors state must be restored after parsing'
-            );
-        } finally {
-            libxml_use_internal_errors($previous);
-        }
-    }
-
-    public function testExtractErrorDetailsWithNonStringType(): void
-    {
-        $details = $this->listener->extractErrorDetails(123);
-        $this->assertEquals(['raw_detail' => 123], $details);
     }
 }

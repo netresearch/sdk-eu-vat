@@ -122,7 +122,9 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      * @throws InvalidRequestException For faults the service attributes to the caller
      *         (faultcode `env:Client`), e.g. `TEDB-ERR-2 - Request is not valid`
      * @throws ServiceUnavailableException For faults the service attributes to itself
-     *         (faultcode `env:Server`) or network issues
+     *         (faultcode `env:Server`), network issues, and local ext-soap failures
+     *         that never reached the service (bare `Client` faultcode, e.g. a non-XML
+     *         response body from a proxy)
      * @throws ConfigurationException For WSDL or configuration errors
      * @throws VatServiceException For any other service-related errors
      *
@@ -313,7 +315,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             // 2. Define TypeConverters for custom data types
             $typeConverters = new TypeConverterCollection([
                 new DateTypeConverter(), // Converts xsd:date to DateTimeImmutable
-                new BigDecimalTypeConverter(), // Converts xsd:decimal to Brick\Math\BigDecimal
+                new BigDecimalTypeConverter(), // Converts xsd:double to Brick\Math\BigDecimal
             ]);
 
             // 3. Create ExtSoapOptions with basic configuration

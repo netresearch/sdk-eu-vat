@@ -12,13 +12,18 @@ use Throwable;
  * This exception is thrown when the EU VAT service is unavailable due to network issues,
  * service downtime, or internal server errors.
  *
- * Two sources feed it:
+ * Three sources feed it:
  * - Transport failures (connection refused, timeout, DNS). These carry no error code, so
  *   getErrorCode() returns null.
  * - SOAP faults the service attributes to itself, i.e. a faultcode whose local part is
  *   `Server` (SOAP 1.1) or `Receiver` (SOAP 1.2). getErrorCode() then returns the TEDB
  *   identifier from the faultstring if one is present, otherwise the raw SOAP fault code
  *   (e.g. `env:Server`).
+ * - Client faults ext-soap raised locally, before any service response could be read: a
+ *   bare `Client`/`Sender` faultcode with no TEDB identifier, as produced by a non-XML or
+ *   truncated response body (proxy, WAF, captive portal) or a serialization failure.
+ *   getErrorCode() returns the raw fault code, e.g. `Client`. No request was rejected, and
+ *   the cause is typically transient, so these are retryable like a transport failure.
  *
  * @example Network timeout:
  * ```php
@@ -41,7 +46,8 @@ use Throwable;
  *         // Transport failure - safe to retry after a short backoff
  *         $logger->warning('EU VAT service unreachable', ['error' => $e->getMessage()]);
  *     } else {
- *         // The service reported an internal error; notify operations
+ *         // The service reported an internal error, or ext-soap could not read a response
+ *         // at all (code `Client`); notify operations
  *         $logger->critical('EU VAT service internal error', [
  *             'code' => $e->getErrorCode(),
  *             'error' => $e->getMessage(),

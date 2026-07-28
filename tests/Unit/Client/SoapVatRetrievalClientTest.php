@@ -181,6 +181,72 @@ class SoapVatRetrievalClientTest extends TestCase
         }
     }
 
+    /**
+     * A local ext-soap failure must not be reported to callers as a rejected request
+     *
+     * ext-soap raises its own failures as bare `Client` faults - here the fault a
+     * non-XML response body produces, obtained from ext-soap itself rather than
+     * hand-written. Nothing reached the service, and the cause (proxy, WAF, captive
+     * portal, truncated body) is typically transient, so callers must see the
+     * retryable exception.
+     */
+    public function testRetrieveVatRatesMapsLocalExtSoapFaultToServiceUnavailableException(): void
+    {
+        $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
+        $soapFault = $this->captureNonXmlResponseFault();
+
+        $this->assertSame('Client', $soapFault->faultcode, 'ext-soap raises local failures as bare Client faults');
+
+        $mockEngine = $this->createMock(Engine::class);
+        $mockEngine->expects($this->once())
+            ->method('request')
+            ->willThrowException($soapFault);
+
+        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+
+        try {
+            $client->retrieveVatRates($request);
+            $this->fail('Expected ServiceUnavailableException');
+        } catch (ServiceUnavailableException $e) {
+            $this->assertStringContainsString('looks like we got no XML document', $e->getMessage());
+            $this->assertStringNotContainsString('Invalid request', $e->getMessage());
+            $this->assertSame($soapFault, $e->getPrevious());
+        }
+    }
+
+    /**
+     * Obtain the SoapFault ext-soap raises when the response body is not XML
+     *
+     * The transport is stubbed out, so no request leaves the machine; the fault is
+     * genuinely ext-soap's rather than a hand-built approximation of it.
+     */
+    private function captureNonXmlResponseFault(): \SoapFault
+    {
+        $soapClient = new class (null, [
+            'location' => 'http://localhost/never-called',
+            'uri' => 'urn:eu-vat-sdk-test',
+            'exceptions' => true,
+        ]) extends \SoapClient {
+            public function __doRequest(
+                string $request,
+                string $location,
+                string $action,
+                int $version,
+                bool $oneWay = false
+            ): string {
+                return 'Proxy authentication required';
+            }
+        };
+
+        try {
+            $soapClient->__soapCall('retrieveVatRates', []);
+        } catch (\SoapFault $fault) {
+            return $fault;
+        }
+
+        $this->fail('Expected ext-soap to raise a SoapFault for a non-XML response');
+    }
+
     public function testRetrieveVatRatesMapsServerFaultToServiceUnavailableException(): void
     {
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
