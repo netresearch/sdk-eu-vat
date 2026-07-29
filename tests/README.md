@@ -98,15 +98,16 @@ Located in `tests/Integration/`, these tests verify:
 - Memory usage
 - Timeout handling
 
-### Test Data Providers
+### Test Data
 
-The `TestDataProvider` class in `tests/fixtures/` provides:
+Tests take their data from the recorded cassettes in `tests/fixtures/cassettes/`
+rather than from a shared fixture class, so an assertion describes a response the
+service really sent. Each test names the cassette it replays.
 
-- Current EU member states list
-- Known VAT rates for validation
-- Test dates for various scenarios
-- Country groupings for batch testing
-- Edge case configurations
+`tests/fixtures/vcr-bootstrap.php` is the PHPUnit bootstrap. It turns php-vcr on
+before any test file is loaded, because php-vcr patches the SOAP transport while
+that class is being included: if a test loads the transport first, the patch never
+happens and a later replay would reach the live service instead.
 
 ## Writing New Tests
 

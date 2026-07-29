@@ -112,6 +112,15 @@ code, so the next release is a major version. Read "Breaking changes" before upg
   the recorded cassettes
 - Cassettes are tracked by an explicit `.gitignore` rule instead of manual force-adds,
   so a fresh clone replays offline rather than recording live traffic
+- php-vcr is started from the PHPUnit bootstrap. It patches the SOAP transport while
+  that class is being included, so a suite that touched the transport first left it
+  unpatched and every later replay in that process reached the live service instead
+- The performance benchmarks replay committed cassettes and assert on the SDK's own
+  parsing, conversion and memory cost. They ran against the live service before, and
+  their CI job executed nothing at all: the tests were excluded by group, so the job
+  reported success without running a single one
+- `failOnEmptyTestSuite` is set, so no CI gate can report success while executing no
+  tests
 
 ### Removed
 
