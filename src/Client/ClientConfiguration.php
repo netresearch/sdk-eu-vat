@@ -7,7 +7,6 @@ namespace Netresearch\EuVatSdk\Client;
 use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
-use Netresearch\EuVatSdk\Middleware\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -101,8 +100,6 @@ final class ClientConfiguration
      * @param LoggerInterface      $logger           PSR-3 logger implementation
      * @param string|null          $wsdlPath         Local WSDL file path
      * @param TelemetryInterface   $telemetry        Telemetry implementation
-     * @param array<object>        $eventSubscribers Event subscriber objects
-     * @param array<MiddlewareInterface> $middleware Middleware objects
      *
      * @throws ConfigurationException If configuration values are invalid
      */
@@ -113,16 +110,7 @@ final class ClientConfiguration
         public readonly bool $debug,
         public readonly LoggerInterface $logger,
         ?string $wsdlPath,
-        public readonly TelemetryInterface $telemetry,
-        /**
-         * Array of event subscriber objects for extension
-         */
-        public readonly array $eventSubscribers,
-        /**
-         * Array of middleware objects for request/response processing
-         * @var array<MiddlewareInterface>
-         */
-        public readonly array $middleware
+        public readonly TelemetryInterface $telemetry
     ) {
         $this->validateConfiguration($endpoint, $timeout, $wsdlPath);
 
@@ -171,9 +159,7 @@ final class ClientConfiguration
             debug: false,
             logger: $logger ?? new NullLogger(),
             wsdlPath: null,
-            telemetry: new NullTelemetry(),
-            eventSubscribers: [],
-            middleware: []
+            telemetry: new NullTelemetry()
         );
     }
 
@@ -197,9 +183,7 @@ final class ClientConfiguration
             debug: true, // Enable debug for test environment
             logger: $logger ?? new NullLogger(),
             wsdlPath: null,
-            telemetry: new NullTelemetry(),
-            eventSubscribers: [],
-            middleware: []
+            telemetry: new NullTelemetry()
         );
     }
 
@@ -224,9 +208,7 @@ final class ClientConfiguration
             $this->debug,
             $this->logger,
             $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
+            $this->telemetry
         );
     }
 
@@ -252,9 +234,7 @@ final class ClientConfiguration
             $this->debug,
             $this->logger,
             $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
+            $this->telemetry
         );
     }
 
@@ -278,9 +258,7 @@ final class ClientConfiguration
             $enabled, // Updated value
             $this->logger,
             $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
+            $this->telemetry
         );
     }
 
@@ -304,9 +282,7 @@ final class ClientConfiguration
             $this->debug,
             $logger, // Updated value
             $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
+            $this->telemetry
         );
     }
 
@@ -333,9 +309,7 @@ final class ClientConfiguration
             $this->debug,
             $this->logger,
             $path, // Updated value
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
+            $this->telemetry
         );
     }
 
@@ -360,9 +334,7 @@ final class ClientConfiguration
             $this->debug,
             $this->logger,
             $this->wsdlPath,
-            $telemetry, // Updated value
-            $this->eventSubscribers,
-            $this->middleware
+            $telemetry // Updated value
         );
     }
 
@@ -390,65 +362,7 @@ final class ClientConfiguration
             $this->debug,
             $this->logger,
             $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            $this->middleware
-        );
-    }
-
-    /**
-     * Create new instance with additional event subscriber
-     *
-     * @param object $subscriber Event subscriber object
-     * @return self New configuration instance with added event subscriber
-     *
-     * @example Add custom event subscriber:
-     * ```php
-     * $config = ClientConfiguration::production()
-     *     ->withEventSubscriber($customEventSubscriber);
-     * ```
-     */
-    public function withEventSubscriber(object $subscriber): self
-    {
-        return new self(
-            $this->endpoint,
-            $this->soapOptions,
-            $this->timeout,
-            $this->debug,
-            $this->logger,
-            $this->wsdlPath,
-            $this->telemetry,
-            [...$this->eventSubscribers, $subscriber], // Updated value
-            $this->middleware
-        );
-    }
-
-    /**
-     * Create new instance with additional middleware
-     *
-     * @param MiddlewareInterface|array<MiddlewareInterface> $middleware Middleware object or array
-     * @return self New configuration instance with added middleware
-     *
-     * @example Add custom middleware:
-     * ```php
-     * $config = ClientConfiguration::production()
-     *     ->withMiddleware($cachingMiddleware);
-     * ```
-     */
-    public function withMiddleware(MiddlewareInterface|array $middleware): self
-    {
-        $middlewareArray = is_array($middleware) ? $middleware : [$middleware];
-
-        return new self(
-            $this->endpoint,
-            $this->soapOptions,
-            $this->timeout,
-            $this->debug,
-            $this->logger,
-            $this->wsdlPath,
-            $this->telemetry,
-            $this->eventSubscribers,
-            [...$this->middleware, ...$middlewareArray] // Updated value
+            $this->telemetry
         );
     }
 

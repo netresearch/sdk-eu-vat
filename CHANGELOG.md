@@ -38,6 +38,29 @@ code, so the next release is a major version. Read "Breaking changes" before upg
   namespace-prefixed code or a TEDB identifier.
 - **`FaultEventListener::extractErrorDetails()` was removed.** It had no caller inside
   the SDK; fault details are collected while the exception is built.
+- **The event and middleware layers are removed**, about a quarter of the source. No
+  default code path ever reached them: the only places the SDK constructed a listener
+  or a middleware were the `@example` blocks in their own docblocks. Gone are
+  `Netresearch\EuVatSdk\Engine\*` (`EventAwareEngine`, `MiddlewareEngine` and the three
+  event classes), `Netresearch\EuVatSdk\Middleware\*` (`MiddlewareInterface`,
+  `LoggingMiddleware`), `RequestEventListener`, `ResponseEventListener` and
+  `CorrelationIdProvider` — the last generated an identifier that was never attached to
+  a request nor exposed on a response, so it could not correlate anything.
+  `FaultEventListener` stays and is now called directly by the client.
+  With them go `ClientConfiguration::withMiddleware()`, `withEventSubscriber()` and
+  `VatRetrievalClientFactory::createWithEventSubscribers()`, and the
+  `ClientConfiguration` constructor no longer takes `$eventSubscribers` or `$middleware`.
+  To observe requests, implement `TelemetryInterface`; to intercept them, decorate
+  `VatRetrievalClientInterface`.
+- **Telemetry is recorded for real.** `ClientConfiguration::withTelemetry()` and
+  `VatRetrievalClientFactory::createWithTelemetry()` accepted an implementation and then
+  never called it. The client now calls `recordRequest()` with the measured duration on
+  success and `recordError()` on failure, so an implementation that was silently idle
+  will start receiving calls. An exception thrown by a telemetry implementation is
+  logged and swallowed: metrics cannot fail a VAT lookup.
+- **`symfony/event-dispatcher` and `ramsey/uuid` are no longer required.** Nothing in
+  the SDK used them once the event layer and `CorrelationIdProvider` were gone. Projects
+  relying on them transitively through this package must require them directly.
 - **`getResults()` returns one entry per rate type and member state.** The service
   answers a single-country query with every rate it publishes for that country, so a
   request for one member state commonly yields dozens of results. Code assuming one

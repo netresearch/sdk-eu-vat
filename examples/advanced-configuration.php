@@ -23,8 +23,7 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Formatter\LineFormatter;
-use Netresearch\EuVatSdk\Middleware\LoggingMiddleware;
-use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
+use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
 
 echo "=== EU VAT SDK - Advanced Configuration Example ===\n\n";
 
@@ -208,37 +207,74 @@ try {
     echo "   ✗ Configuration validation failed: " . $e->getMessage() . "\n";
 }
 
-// Example 8: Logging and monitoring via middleware
-echo "\n8. Logging and monitoring via middleware:\n";
+// Example 8: Logging and monitoring via telemetry
+echo "\n8. Logging and monitoring via telemetry:\n";
 
 // Custom logger with structured logging
-$structuredLogger = new Logger('vat-service-middleware');
+$structuredLogger = new Logger('vat-service-telemetry');
 $structuredLogger->pushHandler(new StreamHandler('php://stderr', Logger::INFO));
 
+/**
+ * Telemetry sink that forwards SDK metrics to a PSR-3 logger
+ *
+ * A real deployment would push these to Prometheus, StatsD or an APM agent
+ * instead; the interface is the same either way.
+ */
+final class LoggingTelemetry implements TelemetryInterface
+{
+    public function __construct(private readonly Logger $logger)
+    {
+    }
+
+    /**
+     * @param string               $operation Operation that succeeded
+     * @param float                $duration  Duration in seconds
+     * @param array<string, mixed> $context   Request context from the SDK
+     */
+    public function recordRequest(string $operation, float $duration, array $context = []): void
+    {
+        $this->logger->info('EU VAT request completed', [
+            'operation'   => $operation,
+            'duration_ms' => round($duration * 1000, 2),
+            'context'     => $context,
+        ]);
+    }
+
+    /**
+     * @param string               $operation Operation that failed
+     * @param string               $errorType Exception class name
+     * @param array<string, mixed> $context   Error context from the SDK
+     */
+    public function recordError(string $operation, string $errorType, array $context = []): void
+    {
+        $this->logger->error('EU VAT request failed', [
+            'operation'  => $operation,
+            'error_type' => $errorType,
+            'context'    => $context,
+        ]);
+    }
+}
+
 try {
-    // 1. Create an instance of LoggingMiddleware
-    $loggingMiddleware = new LoggingMiddleware($structuredLogger, new NullTelemetry());
-
-    // 2. Configure the client to use the middleware
-    $middlewareConfig = ClientConfiguration::production($structuredLogger)
-        ->withMiddleware([$loggingMiddleware]);
-
-    $monitoredClient = VatRetrievalClientFactory::create($middlewareConfig);
+    // Hand the telemetry sink to the factory - the client records against it automatically
+    $monitoredClient = VatRetrievalClientFactory::createWithTelemetry(
+        new LoggingTelemetry($structuredLogger),
+        ClientConfiguration::production($structuredLogger)
+    );
 
     $request = new VatRatesRequest(
         memberStates: ['DE'],
         situationOn: new DateTime('2024-01-01')
     );
 
-    // The LoggingMiddleware will now capture and log request/response information
     $response = $monitoredClient->retrieveVatRates($request);
 
-    echo "   ✓ Request and response details logged via LoggingMiddleware\n";
-    echo "   ✓ Performance metrics and timing captured\n";
-    
+    echo "   \u{2713} Request timing and result count recorded via telemetry\n";
+    echo "   \u{2713} Retrieved " . count($response->getResults()) . " rate(s)\n";
+
 } catch (VatServiceException $e) {
-    // Errors will be logged by the middleware
-    echo "   ✗ Error captured by middleware and logger: " . $e->getMessage() . "\n";
+    // recordError() has already fired before the exception reached us
+    echo "   \u{2717} Error recorded by telemetry: " . $e->getMessage() . "\n";
 }
 
 echo "\nAdvanced configuration examples completed!\n";

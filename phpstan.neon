@@ -44,7 +44,6 @@ parameters:
         
         # Test data type mismatches (acceptable in unit tests)
         - '#Parameter \#1 \$memberStates of class .+VatRatesRequest constructor expects array<string>, array<int, int> given\.#'
-        - '#Parameter \#1 \$eventSubscribers .+ expects .+EventSubscriberInterface.+, array<int, stdClass> given\.#'
     
     # Strict rules for exception handling  
     checkGenericClassInNonGenericObjectType: true

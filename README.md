@@ -10,11 +10,11 @@ A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/ta
 ## Features
 
 - 🏦 **Financial-Grade Precision**: Rate values are parsed straight from the XML text into `brick/math` BigDecimal — no PHP float is involved at any point, so the exact literal the service sent (including its scale, e.g. `17.0`) is what you get back
-- 🛡️ **Enterprise Ready**: Comprehensive error handling, logging, and telemetry
+- 🛡️ **Typed Errors**: SOAP faults are classified into `InvalidRequestException` for a rejected request and `ServiceUnavailableException` for a failure that never reached the service
 - 🧪 **Thoroughly Tested**: Comprehensive unit and integration test suites with real service validation
 - 🔄 **Modern SOAP**: Built on `php-soap/ext-soap-engine` for reliable SOAP operations
-- 📊 **Observability**: Built-in request/response logging and metrics
-- 🚀 **Performance**: Optimized with WSDL caching and connection pooling support
+- 📊 **Observability**: PSR-3 logging, plus timing and error metrics for any backend through `TelemetryInterface`
+- 🚀 **Performance**: WSDL caching, and the WSDL is bundled so no schema fetch is needed at runtime
 - 📖 **Well Documented**: Comprehensive PHPDoc and usage examples
 
 ## Installation

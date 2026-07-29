@@ -24,11 +24,8 @@ use Soap\ExtSoapEngine\Transport\ExtSoapClientTransport;
 use Soap\ExtSoapEngine\Exception\RequestException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Netresearch\EuVatSdk\Engine\EventAwareEngine;
-use Netresearch\EuVatSdk\Engine\MiddlewareEngine;
 use Netresearch\EuVatSdk\EventListener\FaultEventListener;
+use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
 
 /**
  * SOAP client implementation for EU VAT Retrieval Service
@@ -39,6 +36,7 @@ use Netresearch\EuVatSdk\EventListener\FaultEventListener;
  * - Custom exceptions for domain-specific error handling
  * - TypeConverters for automatic data type conversion
  * - Direct SOAP fault handling and logging
+ * - Telemetry recording for both successful and failed operations
  *
  * The client automatically handles:
  * - WSDL parsing and caching
@@ -91,6 +89,16 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      */
     private readonly FaultEventListener $faultListener;
 
+    /**
+     * Telemetry sink recording operation timings and failures
+     */
+    private readonly TelemetryInterface $telemetry;
+
+    /**
+     * Operation name reported to telemetry
+     */
+    private const OPERATION = 'retrieveVatRates';
+
 
     /**
      * Create SOAP client with configuration
@@ -106,6 +114,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
         private readonly VatRatesResponseConverter $responseConverter = new VatRatesResponseConverter()
     ) {
         $this->logger = $this->config->logger ?? new NullLogger();
+        $this->telemetry = $this->config->telemetry;
         $this->faultListener = new FaultEventListener($this->logger);
         $this->engine = $engine ?? $this->initializeEngine();
     }
@@ -116,6 +125,10 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      * This method makes a SOAP request to the EU VAT service and returns
      * the structured response as DTOs. All SOAP faults are automatically
      * mapped to domain exceptions in the catch block.
+     *
+     * The call is timed and reported to the configured TelemetryInterface:
+     * recordRequest() on success, recordError() on failure. Telemetry failures
+     * are logged and swallowed, so they never affect the outcome of the call.
      *
      * @param VatRatesRequest $request Request containing member states and date
      * @return VatRatesResponse Structured response with VAT rate data
@@ -148,6 +161,30 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
      * ```
      */
     public function retrieveVatRates(VatRatesRequest $request): VatRatesResponse
+    {
+        $startTime = microtime(true);
+
+        try {
+            $response = $this->performRequest($request);
+        } catch (\Throwable $e) {
+            $this->recordErrorTelemetry($request, $e, microtime(true) - $startTime);
+
+            throw $e;
+        }
+
+        $this->recordRequestTelemetry($request, $response, microtime(true) - $startTime);
+
+        return $response;
+    }
+
+    /**
+     * Execute the SOAP call and map every failure onto the documented exceptions
+     *
+     * @param VatRatesRequest $request Request containing member states and date
+     * @return VatRatesResponse Structured response with VAT rate data
+     * @throws VatServiceException For every failure mode documented on retrieveVatRates()
+     */
+    private function performRequest(VatRatesRequest $request): VatRatesResponse
     {
         try {
             /** @var \stdClass $responseObject */
@@ -189,6 +226,89 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
                 0,
                 $e
             );
+        }
+    }
+
+    /**
+     * Record a successful operation against the configured telemetry sink
+     *
+     * @param VatRatesRequest  $request  Request that was issued
+     * @param VatRatesResponse $response Response that was returned
+     * @param float            $duration Wall-clock duration in seconds, as TelemetryInterface documents
+     */
+    private function recordRequestTelemetry(
+        VatRatesRequest $request,
+        VatRatesResponse $response,
+        float $duration
+    ): void {
+        $context = [
+            'member_states' => $request->getMemberStates(),
+            'situation_on' => $request->getSituationOn(),
+            'result_count' => count($response->getResults()),
+            'endpoint' => $this->config->endpoint,
+        ];
+
+        $this->recordTelemetry(
+            static function (TelemetryInterface $telemetry) use ($duration, $context): void {
+                $telemetry->recordRequest(self::OPERATION, $duration, $context);
+            }
+        );
+    }
+
+    /**
+     * Record a failed operation against the configured telemetry sink
+     *
+     * The error type is the exception's short class name, as TelemetryInterface documents.
+     *
+     * @param VatRatesRequest $request   Request that was issued
+     * @param \Throwable      $exception Failure that will be rethrown to the caller
+     * @param float           $duration  Wall-clock time elapsed before the failure, in seconds
+     */
+    private function recordErrorTelemetry(VatRatesRequest $request, \Throwable $exception, float $duration): void
+    {
+        $context = [
+            'member_states' => $request->getMemberStates(),
+            'situation_on' => $request->getSituationOn(),
+            'error_message' => $exception->getMessage(),
+            'endpoint' => $this->config->endpoint,
+            'duration' => $duration,
+        ];
+
+        if ($exception instanceof InvalidRequestException || $exception instanceof ServiceUnavailableException) {
+            $context['error_code'] = $exception->getErrorCode();
+        }
+
+        $errorType = $exception::class;
+        $shortName = strrchr($errorType, '\\');
+        if ($shortName !== false) {
+            $errorType = substr($shortName, 1);
+        }
+
+        $this->recordTelemetry(
+            static function (TelemetryInterface $telemetry) use ($errorType, $context): void {
+                $telemetry->recordError(self::OPERATION, $errorType, $context);
+            }
+        );
+    }
+
+    /**
+     * Invoke the telemetry sink without letting its failures reach the caller
+     *
+     * Telemetry is an observability side channel: a broken metrics backend must never
+     * turn a successful VAT lookup into an error, nor mask the exception a failed one
+     * is about to throw. Failures are therefore swallowed and logged at warning level.
+     *
+     * @param callable(TelemetryInterface): void $record Recording call to perform
+     */
+    private function recordTelemetry(callable $record): void
+    {
+        try {
+            $record($this->telemetry);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Telemetry recording failed and was ignored', [
+                'telemetry_class' => $this->telemetry::class,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -331,37 +451,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
             // 4. Create the base engine
             $driver = ExtSoapDriver::createFromOptions($options);
             $transport = new ExtSoapClientTransport($driver->getClient());
-            $baseEngine = new SimpleEngine($driver, $transport);
-
-            // 5. Add event dispatcher support if event subscribers are configured
-            $engine = $baseEngine;
-            if ($this->config->eventSubscribers !== []) {
-                $dispatcher = new EventDispatcher();
-
-                // Add configured event subscribers
-                foreach ($this->config->eventSubscribers as $subscriber) {
-                    if ($subscriber instanceof EventSubscriberInterface) {
-                        $dispatcher->addSubscriber($subscriber);
-                        continue;
-                    }
-
-                    // Log warning for invalid event listeners
-                    $this->logger->warning(
-                        'Provided event listener does not implement EventSubscriberInterface and was ignored.',
-                        ['listener_class' => $subscriber::class]
-                    );
-                }
-
-                // Wrap engine with event dispatcher
-                $engine = new EventAwareEngine($driver, $transport, $dispatcher);
-            }
-
-            // 6. Add middleware support if middleware is configured
-            if ($this->config->middleware !== []) {
-                return new MiddlewareEngine($engine, $this->config->middleware);
-            }
-
-            return $engine;
+            return new SimpleEngine($driver, $transport);
         } catch (\Throwable $e) {
             throw new ConfigurationException(
                 'Failed to initialize SOAP engine: ' . $e->getMessage(),

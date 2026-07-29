@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\EventListener;
 
-use Netresearch\EuVatSdk\Engine\SoapFaultEvent;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Psr\Log\LoggerInterface;
 use SoapFault;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Event listener for mapping SOAP faults to domain-specific exceptions
+ * Maps SOAP faults from the EU VAT service to domain-specific exceptions
  *
- * This listener intercepts SOAP faults from the EU VAT service and transforms
- * them into domain-specific exceptions with enhanced error context.
+ * The client calls this directly from its SOAP fault catch block to transform
+ * faults into domain-specific exceptions with enhanced error context.
  *
  * The mapping is derived from the fault shapes the TEDB service actually
  * produces. A rejected request looks like this on the wire:
@@ -88,7 +86,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
-final class FaultEventListener implements EventSubscriberInterface
+final class FaultEventListener
 {
     /**
      * SOAP faultcode local parts that place responsibility on the caller
@@ -137,31 +135,6 @@ final class FaultEventListener implements EventSubscriberInterface
      */
     public function __construct(private readonly LoggerInterface $logger)
     {
-    }
-
-    /**
-     * Get subscribed events for Symfony EventDispatcher
-     *
-     * @return array<string, string>
-     */
-    public static function getSubscribedEvents(): array
-    {
-        return [
-            SoapFaultEvent::NAME => 'onSoapFault',
-        ];
-    }
-
-    /**
-     * Handle SOAP fault event
-     *
-     * @param SoapFaultEvent $event The fault event from EventAwareEngine
-     */
-    public function onSoapFault(SoapFaultEvent $event): void
-    {
-        $exception = $event->getException();
-        if ($exception instanceof SoapFault) {
-            $this->handleSoapFault($exception);
-        }
     }
 
     /**

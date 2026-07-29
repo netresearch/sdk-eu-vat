@@ -11,7 +11,6 @@ use Netresearch\EuVatSdk\Exception\ConfigurationException;
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Factory for creating EU VAT Retrieval Service clients
@@ -175,56 +174,6 @@ class VatRetrievalClientFactory
     ): VatRetrievalClientInterface {
         $configuration = $config ?? self::createDefaultProductionConfig($logger);
         $configuration = $configuration->withTelemetry($telemetry);
-
-        return new SoapVatRetrievalClient($configuration);
-    }
-
-    /**
-     * Create a client with custom event subscribers for advanced integrations
-     *
-     * This allows for advanced configurations with custom event handling,
-     * useful for enterprise integrations that need custom request/response processing.
-     *
-     * @param array<EventSubscriberInterface> $eventSubscribers Custom event subscribers
-     * @param ClientConfiguration|null        $config           Optional base configuration
-     * @param LoggerInterface|null            $logger           Optional logger
-     *
-     * @return VatRetrievalClientInterface Configured client with custom event handling
-     *
-     * @throws ConfigurationException If the configuration is invalid
-     *
-     * @example Custom event handling:
-     * ```php
-     * class RequestMetricsSubscriber implements EventSubscriberInterface {
-     *     public static function getSubscribedEvents(): array {
-     *         return [RequestEvent::class => 'onRequest'];
-     *     }
-     *
-     *     public function onRequest(RequestEvent $event): void {
-     *         // Custom request processing
-     *         $this->metricsCollector->recordRequestStart();
-     *     }
-     * }
-     *
-     * $subscribers = [new RequestMetricsSubscriber()];
-     * $client = VatRetrievalClientFactory::createWithEventSubscribers($subscribers);
-     * ```
-     */
-    public static function createWithEventSubscribers(
-        array $eventSubscribers,
-        ?ClientConfiguration $config = null,
-        ?LoggerInterface $logger = null
-    ): VatRetrievalClientInterface {
-        $configuration = $config ?? self::createDefaultProductionConfig($logger);
-
-        foreach ($eventSubscribers as $subscriber) {
-            if (!$subscriber instanceof EventSubscriberInterface) {
-                throw new ConfigurationException(
-                    'All event subscribers must implement EventSubscriberInterface'
-                );
-            }
-            $configuration = $configuration->withEventSubscriber($subscriber);
-        }
 
         return new SoapVatRetrievalClient($configuration);
     }

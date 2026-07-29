@@ -10,7 +10,6 @@ use Netresearch\EuVatSdk\Telemetry\NullTelemetry;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Psr\Log\LoggerInterface;
-use Netresearch\EuVatSdk\Middleware\MiddlewareInterface;
 
 /**
  * Test ClientConfiguration immutable object
@@ -27,8 +26,6 @@ class ClientConfigurationTest extends TestCase
         $this->assertInstanceOf(NullLogger::class, $config->logger);
         $this->assertInstanceOf(NullTelemetry::class, $config->telemetry);
         $this->assertNull($config->wsdlPath);
-        $this->assertEmpty($config->eventSubscribers);
-        $this->assertEmpty($config->middleware);
     }
 
     public function testTestFactoryMethod(): void
@@ -134,52 +131,21 @@ class ClientConfigurationTest extends TestCase
         $this->assertEquals($original->timeout, $modified->soapOptions['connection_timeout']);
     }
 
-    public function testWithEventSubscriberImmutability(): void
-    {
-        $original = ClientConfiguration::production();
-        $subscriber = new \stdClass();
-        $modified = $original->withEventSubscriber($subscriber);
-
-        // Original should be unchanged
-        $this->assertEmpty($original->eventSubscribers);
-
-        // Modified should have subscriber
-        $this->assertCount(1, $modified->eventSubscribers);
-        $this->assertSame($subscriber, $modified->eventSubscribers[0]);
-    }
-
-    public function testWithMiddlewareImmutability(): void
-    {
-        $original = ClientConfiguration::production();
-        $middleware = $this->createMock(MiddlewareInterface::class);
-        $modified = $original->withMiddleware($middleware);
-
-        // Original should be unchanged
-        $this->assertEmpty($original->middleware);
-
-        // Modified should have middleware
-        $this->assertCount(1, $modified->middleware);
-        $this->assertSame($middleware, $modified->middleware[0]);
-    }
-
     public function testChainedWithMethods(): void
     {
         $logger = $this->createMock(LoggerInterface::class);
-        $subscriber = new \stdClass();
-        $middleware = $this->createMock(MiddlewareInterface::class);
+        $telemetry = new NullTelemetry();
 
         $config = ClientConfiguration::production()
             ->withTimeout(45)
             ->withDebug(true)
             ->withLogger($logger)
-            ->withEventSubscriber($subscriber)
-            ->withMiddleware($middleware);
+            ->withTelemetry($telemetry);
 
         $this->assertEquals(45, $config->timeout);
         $this->assertTrue($config->debug);
         $this->assertSame($logger, $config->logger);
-        $this->assertSame($subscriber, $config->eventSubscribers[0]);
-        $this->assertSame($middleware, $config->middleware[0]);
+        $this->assertSame($telemetry, $config->telemetry);
     }
 
     public function testInvalidEndpointThrowsException(): void
@@ -200,9 +166,7 @@ class ClientConfigurationTest extends TestCase
             false,
             new NullLogger(),
             null,
-            new NullTelemetry(),
-            [],
-            []
+            new NullTelemetry()
         );
     }
 
