@@ -68,19 +68,3 @@ jobs:
       run-rector: true
       run-phpstan: false
       run-phpunit: false
-
-  performance:
-    name: Performance Benchmarks
-    uses: netresearch/.github/.github/workflows/php-ci.yml@main
-    permissions:
-      contents: read
-    with:
-      php-versions: '["8.2"]'
-      extensions: "soap, libxml"
-      run-phpstan: false
-      # The benchmarks replay committed cassettes and assert on the SDK's own
-      # parsing, conversion and memory overhead -- never on service latency.
-      # phpunit.xml sets failOnEmptyTestSuite, so this job can no longer report
-      # success while executing nothing, which is what it did while the class
-      # was tagged @group slow and therefore excluded by phpunit.xml.
-      phpunit-cmd: 'USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit tests/Integration/PerformanceBenchmarkTest.php --no-coverage'

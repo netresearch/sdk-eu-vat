@@ -1,6 +1,7 @@
 # EU VAT SDK Test Suite
 
-This directory contains the comprehensive test suite for the EU VAT SOAP SDK, including unit tests, integration tests, and performance benchmarks.
+This directory contains the test suite for the EU VAT SOAP SDK: unit tests and
+integration tests that replay recorded service responses.
 
 ## Overview
 
@@ -31,9 +32,6 @@ The test suite is organized into three main categories:
 ```bash
 # Run tests that don't require network access
 ./vendor/bin/phpunit --exclude-group=network
-
-# Run performance benchmarks
-./vendor/bin/phpunit --group=performance
 
 # Run slow tests
 ./vendor/bin/phpunit --group=slow
@@ -94,9 +92,8 @@ Located in `tests/Integration/`, these tests verify:
 - Successful VAT rate retrieval for single/multiple countries
 - Error handling (invalid country codes, dates, etc.)
 - Historical data queries (Brexit transition, etc.)
-- Performance benchmarks
-- Memory usage
-- Timeout handling
+- That a multi-country request costs one service call, and that an unrecorded
+  request fails locally instead of reaching the service (ServiceInteractionTest)
 
 ### Test Data
 
@@ -150,21 +147,6 @@ class MyIntegrationTest extends IntegrationTestCase
         $this->assertCount(1, $response->getResults());
     }
 }
-```
-
-## Performance Testing
-
-Performance benchmarks help ensure the SDK maintains acceptable performance characteristics:
-
-```bash
-# Run performance tests
-./vendor/bin/phpunit --group=performance
-
-# Performance metrics tracked:
-# - Single request response time
-# - Batch request efficiency
-# - Memory usage
-# - Concurrent request handling
 ```
 
 ## CI/CD Integration

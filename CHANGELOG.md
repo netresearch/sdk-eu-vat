@@ -115,10 +115,12 @@ code, so the next release is a major version. Read "Breaking changes" before upg
 - php-vcr is started from the PHPUnit bootstrap. It patches the SOAP transport while
   that class is being included, so a suite that touched the transport first left it
   unpatched and every later replay in that process reached the live service instead
-- The performance benchmarks replay committed cassettes and assert on the SDK's own
-  parsing, conversion and memory cost. They ran against the live service before, and
-  their CI job executed nothing at all: the tests were excluded by group, so the job
-  reported success without running a single one
+- The performance benchmarks are removed along with their CI job. The job executed
+  nothing at all — every test in it was excluded by group, so it reported success
+  without running one — and the suite behind it called the live service. What was
+  worth keeping is now two guards in the integration suite: a request for every
+  member state must cost a single service call, and a request no cassette answers
+  must fail locally instead of reaching the service
 - `failOnEmptyTestSuite` is set, so no CI gate can report success while executing no
   tests
 
