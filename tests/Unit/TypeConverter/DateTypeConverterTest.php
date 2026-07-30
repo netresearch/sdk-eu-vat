@@ -110,12 +110,16 @@ class DateTypeConverterTest extends TestCase
         ]) extends \SoapClient {
             public string $capturedRequest = '';
 
+            // php-vcr rewrites `extends \SoapClient` to extend its own SoapClient, which
+            // from 1.8.2 declares this extra optional parameter. Accepting it keeps the
+            // override valid against that parent and against plain \SoapClient alike.
             public function __doRequest(
                 string $request,
                 string $location,
                 string $action,
                 int $version,
-                bool $oneWay = false
+                bool $oneWay = false,
+                ?string $uriParserClass = null
             ): ?string {
                 $this->capturedRequest = $request;
                 return '';
