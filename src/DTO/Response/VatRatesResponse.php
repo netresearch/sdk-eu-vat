@@ -52,11 +52,13 @@ use LogicException;
  *
  * @example Filtering by category:
  * ```php
+ * // The service reports a category per result, and omits it for standard rates,
+ * // so this returns only the reduced-rate results that name FOODSTUFFS.
  * $foodstuffRates = $response->getResultsByCategory('FOODSTUFFS');
  * foreach ($foodstuffRates as $result) {
  *     $value = $result->getRate()->getValue();
  *     if ($value !== null) {
- *         echo $result->getMemberState() . ': ' . $value . "%\n";
+ *         echo $result->getMemberState() . ': ' . $value . "% (" . $result->getCategory() . ")\n";
  *     }
  * }
  * ```
@@ -117,13 +119,19 @@ final class VatRatesResponse implements Iterator, ArrayAccess, Countable
     /**
      * Get results filtered by category
      *
+     * Matches on the category identifier reported by the service (see
+     * VatRateResult::getCategory()). Results the service reported without a category —
+     * standard rates, for instance — never match. The comparison is exact, because the
+     * identifiers are a fixed vocabulary defined in the TEDB External Interface
+     * Specification.
+     *
      * @param string $category Category identifier (e.g., 'FOODSTUFFS')
-     * @return array<VatRateResult> Results with the specified category
+     * @return array<VatRateResult> Results with the specified category, empty if none match
      */
     public function getResultsByCategory(string $category): array
     {
         return $this->filterResults(
-            fn(VatRateResult $result): bool => $result->getRate()->getCategory() === $category
+            fn(VatRateResult $result): bool => $result->getCategory() === $category
         );
     }
 

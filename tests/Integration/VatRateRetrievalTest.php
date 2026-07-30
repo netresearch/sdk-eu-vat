@@ -253,6 +253,60 @@ class VatRateRetrievalTest extends IntegrationTestCase
     }
 
     /**
+     * Test that the categories the service reports survive conversion
+     *
+     * The recorded German response for 2024-01-01 carries 36 results, 34 of which
+     * name a category on the vatRateResults element; the two DEFAULT (standard)
+     * results carry none. Both halves are asserted here: a real identifier and its
+     * description must arrive intact, and the uncategorised standard rate must
+     * report null without disturbing the rest of the response.
+     *
+     * @test
+     */
+    public function testRetrievedResultsCarryCategories(): void
+    {
+        $this->setupVcr('vat-rates-single-country-de');
+
+        $request = new VatRatesRequest(
+            memberStates: ['DE'],
+            situationOn: new DateTime('2024-01-01')
+        );
+
+        $response = $this->client->retrieveVatRates($request);
+
+        // NEWSPAPERS appears twice in the recording, both times as a 7.0 reduced rate
+        $newspaperResults = $response->getResultsByCategory('NEWSPAPERS');
+        $this->assertNotEmpty(
+            $newspaperResults,
+            'The recorded response reports a NEWSPAPERS category that must survive conversion'
+        );
+
+        foreach ($newspaperResults as $result) {
+            $this->assertEquals('NEWSPAPERS', $result->getCategory());
+            $this->assertEquals('Newspapers', $result->getCategoryDescription());
+            $this->assertEquals('REDUCED_RATE', $result->getRate()->getType());
+            $this->assertEquals('7.0', (string) $result->getRate()->getValue());
+        }
+
+        // An unknown identifier yields no results rather than everything
+        $this->assertEquals([], $response->getResultsByCategory('NO_SUCH_CATEGORY'));
+
+        // The standard rate is reported without a category
+        $standardResult = $this->findStandardRateResult($response->getResults(), 'DE');
+        $this->assertNotNull($standardResult);
+        $this->assertNull($standardResult->getCategory());
+        $this->assertNull($standardResult->getCategoryDescription());
+
+        // Only a subset of results is categorised, so the filter really filters
+        $categorised = array_filter(
+            $response->getResults(),
+            static fn(VatRateResult $result): bool => $result->getCategory() !== null
+        );
+        $this->assertGreaterThan(count($newspaperResults), count($categorised));
+        $this->assertLessThan(count($response->getResults()), count($categorised));
+    }
+
+    /**
      * Find the standard-rate result (rate type DEFAULT) for a member state
      *
      * Regional variants (e.g. the Canary Islands for ES) also carry the

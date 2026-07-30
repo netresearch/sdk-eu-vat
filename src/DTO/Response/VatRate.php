@@ -39,11 +39,13 @@ use Netresearch\EuVatSdk\Exception\ParseException;
  * var_dump($rate->getValue()); // NULL
  * ```
  *
- * @example With category information:
+ * A rate carries no category. The service reports the category on the enclosing
+ * result element (`vatRateResults/category` in `VatRetrievalServiceType.xsd`), a
+ * sibling of `rate`, so it is exposed as VatRateResult::getCategory():
  * ```php
- * $rate = new VatRate('REDUCED', '7.0', 'FOODSTUFFS');
- * echo $rate->getCategory(); // "FOODSTUFFS"
- * echo $rate->isReduced(); // true
+ * $result = $response->getResultsByCategory('FOODSTUFFS')[0];
+ * echo $result->getCategory();            // "FOODSTUFFS"
+ * echo $result->getRate()->isReduced();   // true
  * ```
  *
  * @package Netresearch\EuVatSdk\DTO\Response
@@ -61,12 +63,10 @@ final class VatRate implements \Stringable
      *                              with minOccurs="0" for every rate type, so any type may arrive
      *                              without a value — typically exempt/out-of-scope rates, but also
      *                              rates a member state does not levy (e.g. PARKING_RATE).
-     * @param string|null $category Optional category identifier (e.g., 'FOODSTUFFS').
      */
     public function __construct(
         private readonly string $type,
-        private readonly ?string $value,
-        private readonly ?string $category = null
+        private readonly ?string $value
     ) {
     }
 
@@ -144,17 +144,6 @@ final class VatRate implements \Stringable
     {
         return $this->getValue()?->toFloat();
     }
-
-    /**
-     * Get the category if available
-     *
-     * @return string|null The category identifier or null if not specified
-     */
-    public function getCategory(): ?string
-    {
-        return $this->category;
-    }
-
 
     /**
      * Check if this is a standard VAT rate

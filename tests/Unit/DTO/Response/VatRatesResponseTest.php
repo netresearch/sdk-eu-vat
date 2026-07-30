@@ -23,10 +23,11 @@ class VatRatesResponseTest extends TestCase
 
         $results = [
             new VatRateResult('DE', new VatRate('STANDARD', '19.0'), $date),
-            new VatRateResult('DE', new VatRate('REDUCED', '7.0', 'FOODSTUFFS'), $date),
+            new VatRateResult('DE', new VatRate('REDUCED', '7.0'), $date, null, 'FOODSTUFFS', 'Foodstuffs'),
             new VatRateResult('FR', new VatRate('STANDARD', '20.0'), $date),
-            new VatRateResult('FR', new VatRate('REDUCED', '5.5', 'FOODSTUFFS'), $date),
+            new VatRateResult('FR', new VatRate('REDUCED', '5.5'), $date, null, 'FOODSTUFFS', 'Foodstuffs'),
             new VatRateResult('IT', new VatRate('STANDARD', '22.0'), $date),
+            new VatRateResult('IT', new VatRate('REDUCED', '10.0'), $date, null, 'ACCOMMODATION', 'Accommodation'),
         ];
 
         $this->response = new VatRatesResponse($results);
@@ -36,7 +37,7 @@ class VatRatesResponseTest extends TestCase
     {
         $results = $this->response->getResults();
 
-        $this->assertCount(5, $results);
+        $this->assertCount(6, $results);
         $this->assertInstanceOf(VatRateResult::class, $results[0]);
     }
 
@@ -69,8 +70,25 @@ class VatRatesResponseTest extends TestCase
         $foodstuffResults = $this->response->getResultsByCategory('FOODSTUFFS');
 
         $this->assertCount(2, $foodstuffResults);
-        $this->assertEquals('FOODSTUFFS', $foodstuffResults[0]->getRate()->getCategory());
-        $this->assertEquals('FOODSTUFFS', $foodstuffResults[1]->getRate()->getCategory());
+        $this->assertEquals('FOODSTUFFS', $foodstuffResults[0]->getCategory());
+        $this->assertEquals('FOODSTUFFS', $foodstuffResults[1]->getCategory());
+        $this->assertEquals(['DE', 'FR'], array_map(
+            static fn(VatRateResult $result): string => $result->getMemberState(),
+            $foodstuffResults
+        ));
+    }
+
+    /**
+     * A category filter must not sweep in results carrying a different category,
+     * nor the standard rates that carry no category at all.
+     */
+    public function testGetResultsByCategoryExcludesOtherAndUncategorisedResults(): void
+    {
+        $accommodationResults = $this->response->getResultsByCategory('ACCOMMODATION');
+
+        $this->assertCount(1, $accommodationResults);
+        $this->assertEquals('IT', $accommodationResults[0]->getMemberState());
+        $this->assertEquals('ACCOMMODATION', $accommodationResults[0]->getCategory());
     }
 
     public function testGetResultsByNonExistentCategory(): void
@@ -90,7 +108,7 @@ class VatRatesResponseTest extends TestCase
             $count++;
         }
 
-        $this->assertEquals(5, $count);
+        $this->assertEquals(6, $count);
     }
 
     public function testArrayAccessInterface(): void
@@ -121,8 +139,8 @@ class VatRatesResponseTest extends TestCase
 
     public function testCountInterface(): void
     {
-        $this->assertCount(5, $this->response);
-        $this->assertEquals(5, count($this->response));
+        $this->assertCount(6, $this->response);
+        $this->assertEquals(6, count($this->response));
     }
 
     public function testEmptyResponse(): void

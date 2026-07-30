@@ -23,7 +23,6 @@ class VatRateTest extends TestCase
         $this->assertInstanceOf(BigDecimal::class, $rate->getDecimalValue());
         $this->assertEquals('19.0', $rate->getDecimalValue()->__toString());
         $this->assertEquals(19.0, $rate->getValueAsFloat());
-        $this->assertNull($rate->getCategory());
 
         $this->assertTrue($rate->isStandard());
         $this->assertFalse($rate->isReduced());
@@ -35,11 +34,10 @@ class VatRateTest extends TestCase
 
     public function testReducedRate(): void
     {
-        $rate = new VatRate('REDUCED', '7.0', 'FOODSTUFFS');
+        $rate = new VatRate('REDUCED', '7.0');
 
         $this->assertEquals('REDUCED', $rate->getType());
         $this->assertEquals('7.0', $rate->getValue());
-        $this->assertEquals('FOODSTUFFS', $rate->getCategory());
 
         $this->assertFalse($rate->isStandard());
         $this->assertTrue($rate->isReduced());

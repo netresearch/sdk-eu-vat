@@ -161,4 +161,151 @@ class VatRatesResponseConverterTest extends TestCase
 
         $this->converter->convert($response);
     }
+
+    /**
+     * Attaches a category to a raw result the way the service sends it: on the
+     * vatRateResults element as a sibling of "rate", per VatRetrievalServiceType.xsd.
+     */
+    private function attachCategory(stdClass $result, ?string $identifier, ?string $description): stdClass
+    {
+        $category = new stdClass();
+        if ($identifier !== null) {
+            $category->identifier = $identifier;
+        }
+        if ($description !== null) {
+            $category->description = $description;
+        }
+        $result->category = $category;
+
+        return $result;
+    }
+
+    public function testConvertsResultCategory(): void
+    {
+        $result = $this->attachCategory(
+            $this->createResultData('REDUCED_RATE', BigDecimal::of('7.0')),
+            'FOODSTUFFS',
+            'Foodstuffs for human and animal consumption'
+        );
+
+        $response = new stdClass();
+        $response->vatRateResults = $result;
+
+        $results = $this->converter->convert($response)->getResults();
+
+        $this->assertSame('FOODSTUFFS', $results[0]->getCategory());
+        $this->assertSame('Foodstuffs for human and animal consumption', $results[0]->getCategoryDescription());
+    }
+
+    /**
+     * The XSD declares category with minOccurs="0" and the service omits it for
+     * standard rates, so its absence must yield null rather than an error.
+     */
+    public function testResultWithoutCategoryYieldsNull(): void
+    {
+        $response = new stdClass();
+        $response->vatRateResults = $this->createResultData('DEFAULT', BigDecimal::of('19.0'));
+
+        $results = $this->converter->convert($response)->getResults();
+
+        $this->assertNull($results[0]->getCategory());
+        $this->assertNull($results[0]->getCategoryDescription());
+    }
+
+    /**
+     * A result without a category must not discard the categories of the results
+     * around it, nor abort the response.
+     */
+    public function testMissingCategoryDoesNotDiscardOtherResults(): void
+    {
+        $reduced = $this->attachCategory(
+            $this->createResultData('REDUCED_RATE', BigDecimal::of('7.0')),
+            'FOODSTUFFS',
+            'Foodstuffs'
+        );
+        $reduced->memberState = 'DE';
+
+        $standard = $this->createResultData('DEFAULT', BigDecimal::of('19.0'));
+        $standard->memberState = 'DE';
+
+        $trailing = $this->attachCategory(
+            $this->createResultData('REDUCED_RATE', BigDecimal::of('10.0')),
+            'ACCOMMODATION',
+            'Accommodation'
+        );
+        $trailing->memberState = 'IT';
+
+        $response = new stdClass();
+        $response->vatRateResults = [$reduced, $standard, $trailing];
+
+        $converted = $this->converter->convert($response);
+
+        $this->assertCount(3, $converted->getResults());
+        $this->assertSame(['FOODSTUFFS', null, 'ACCOMMODATION'], array_map(
+            static fn($result): ?string => $result->getCategory(),
+            $converted->getResults()
+        ));
+
+        $foodstuffs = $converted->getResultsByCategory('FOODSTUFFS');
+        $this->assertCount(1, $foodstuffs);
+        $this->assertSame('DE', $foodstuffs[0]->getMemberState());
+        $this->assertSame([], $converted->getResultsByCategory('PHARMACEUTICAL_PRODUCTS'));
+    }
+
+    /**
+     * A malformed category (element present but without a usable identifier) must
+     * degrade to null instead of aborting the whole response.
+     *
+     * @dataProvider malformedCategoryProvider
+     */
+    public function testMalformedCategoryDegradesToNull(?string $identifier, ?string $description): void
+    {
+        $result = $this->attachCategory(
+            $this->createResultData('REDUCED_RATE', BigDecimal::of('7.0')),
+            $identifier,
+            $description
+        );
+
+        $response = new stdClass();
+        $response->vatRateResults = $result;
+
+        $results = $this->converter->convert($response)->getResults();
+
+        $this->assertCount(1, $results);
+        $this->assertNull($results[0]->getCategory());
+        $this->assertNull($results[0]->getCategoryDescription());
+    }
+
+    /**
+     * @return array<string, array{0: string|null, 1: string|null}>
+     */
+    public static function malformedCategoryProvider(): array
+    {
+        return [
+            'identifier element absent' => [null, 'Foodstuffs'],
+            'identifier empty' => ['', 'Foodstuffs'],
+            'identifier blank' => ['   ', 'Foodstuffs'],
+        ];
+    }
+
+    /**
+     * The XSD requires a description inside a category element, but a response that
+     * omits it must still surrender the identifier the filter API depends on.
+     */
+    public function testCategoryWithoutDescriptionKeepsIdentifier(): void
+    {
+        $result = $this->attachCategory(
+            $this->createResultData('REDUCED_RATE', BigDecimal::of('7.0')),
+            'SUPPLY_WATER',
+            null
+        );
+
+        $response = new stdClass();
+        $response->vatRateResults = $result;
+
+        $results = $this->converter->convert($response)->getResults();
+
+        $this->assertSame('SUPPLY_WATER', $results[0]->getCategory());
+        $this->assertNull($results[0]->getCategoryDescription());
+    }
 }

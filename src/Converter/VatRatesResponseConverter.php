@@ -110,11 +110,15 @@ final class VatRatesResponseConverter
                 ? $data->comment
                 : null;
 
+            [$category, $categoryDescription] = $this->extractCategory($data);
+
             return new VatRateResult(
                 memberState: (string) $memberState,
                 rate: $vatRate,
                 situationOn: $situationOn,
-                comment: $comment
+                comment: $comment,
+                category: $category,
+                categoryDescription: $categoryDescription
             );
         } catch (\Throwable $e) {
             if ($e instanceof ConversionException) {
@@ -128,6 +132,38 @@ final class VatRatesResponseConverter
                 $e
             );
         }
+    }
+
+    /**
+     * Extracts the optional category of a VAT rate result
+     *
+     * The XSD places `category` on the `vatRateResults` element as a sibling of
+     * `rate`, with minOccurs="0": the service sends it for the rates that apply to
+     * a specific group of goods or services (typically reduced rates) and omits it
+     * entirely for standard rates. A missing, malformed or partially populated
+     * category is therefore reported as null rather than failing the conversion,
+     * so that one odd result cannot discard the whole response.
+     *
+     * @param stdClass $data Raw VAT rate result data
+     * @return array{0: string|null, 1: string|null} Category identifier and description
+     */
+    private function extractCategory(stdClass $data): array
+    {
+        if (!isset($data->category) || !$data->category instanceof stdClass) {
+            return [null, null];
+        }
+
+        $identifier = $data->category->identifier ?? null;
+        if (!is_string($identifier) || trim($identifier) === '') {
+            return [null, null];
+        }
+
+        $description = $data->category->description ?? null;
+
+        return [
+            trim($identifier),
+            is_string($description) && $description !== '' ? $description : null,
+        ];
     }
 
     /**
@@ -150,7 +186,7 @@ final class VatRatesResponseConverter
             // returns the rate element without a value. A missing value is therefore
             // schema-valid for any rate type and must not fail the response.
             if ($value === null) {
-                return new VatRate(type: (string) $type, value: null, category: null);
+                return new VatRate(type: (string) $type, value: null);
             }
 
             // Normal path: BigDecimalTypeConverter has already decoded the xs:double
@@ -175,14 +211,9 @@ final class VatRatesResponseConverter
                 $value = BigDecimal::of((string) $value);
             }
 
-            // Extract optional category - this comes from the parent result type, not the rate itself
-            // Based on XSD analysis, category is part of the vatRateResults, not the rate element
-            $category = null; // Will be handled at VatRateResult level if needed
-
             return new VatRate(
                 type: (string) $type,
-                value: $value->__toString(), // Convert BigDecimal to string for VatRate constructor
-                category: $category
+                value: $value->__toString() // Convert BigDecimal to string for VatRate constructor
             );
         } catch (\Throwable $e) {
             if ($e instanceof ConversionException) {

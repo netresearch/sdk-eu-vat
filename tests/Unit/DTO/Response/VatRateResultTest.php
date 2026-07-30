@@ -58,4 +58,20 @@ class VatRateResultTest extends TestCase
         $result = new VatRateResult('DE', $rate, $date, 'Special rate');
         $this->assertEquals('Special rate', $result->getComment());
     }
+
+    public function testOptionalCategory(): void
+    {
+        $rate = new VatRate('REDUCED_RATE', '7.0');
+        $date = new DateTime('2024-01-01');
+
+        // Without category — the service omits it for standard rates
+        $result = new VatRateResult('DE', $rate, $date);
+        $this->assertNull($result->getCategory());
+        $this->assertNull($result->getCategoryDescription());
+
+        // With category
+        $result = new VatRateResult('DE', $rate, $date, null, 'FOODSTUFFS', 'Foodstuffs for consumption');
+        $this->assertEquals('FOODSTUFFS', $result->getCategory());
+        $this->assertEquals('Foodstuffs for consumption', $result->getCategoryDescription());
+    }
 }
