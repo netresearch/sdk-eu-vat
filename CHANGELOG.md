@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `php-vcr/php-vcr` widened to `>=1.6.4 <1.12`. The `<1.8.2` cap recorded under 2.0.0
+  is obsolete: `php-soap/ext-soap-engine` declares the `$uriParserClass` parameter
+  itself as of 1.12.0, and the `SoapClient` test doubles now accept it. 1.11 also
+  supports PHP 8.5, which 1.8.1 does not, so the old cap would have blocked the first
+  developer to move to 8.5. Cassettes are unaffected
+
 ## [2.0.0] - 2026-07-30
 
 This release corrects the SOAP request encoding, the response conversion and the
