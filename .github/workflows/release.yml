@@ -9,6 +9,13 @@ name: Release
 #
 # The reusable workflow rejects lightweight tags, which is how v1.0.0 ended up
 # as a bare commit ref rather than a tag object.
+#
+# No `id-token: write` / `attestations: write` here, deliberately. Release linters
+# flag their absence, but build provenance attests artefacts a workflow builds and
+# uploads, and this one builds nothing — Packagist fetches the source from the tag.
+# The reusable workflow declares no attestation, SBOM or cosign step either, so the
+# permissions would grant token scope nothing consumes. The signed tag is what
+# carries provenance for this package.
 
 on:
   push:
