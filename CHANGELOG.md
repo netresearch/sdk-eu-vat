@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-07-30
+
+The last release supporting PHP 8.2. Every dependency is moved to the newest version
+installable on 8.2; the floor rises to 8.4 in the next major, where the remaining
+tooling updates land.
+
 ### Breaking changes
 
 - **`brick/math` now requires `^0.18`**, where `^0.11 || ^0.12` was previously accepted.
