@@ -118,9 +118,6 @@ happens and a later replay would reach the live service instead.
 ```php
 class MyComponentTest extends TestCase
 {
-    /**
-     * @test
-     */
     public function testComponentBehavior(): void
     {
         $component = new MyComponent();
@@ -135,12 +132,11 @@ class MyComponentTest extends TestCase
 ### Integration Test Example
 
 ```php
+use PHPUnit\Framework\Attributes\Group;
+
 class MyIntegrationTest extends IntegrationTestCase
 {
-    /**
-     * @test
-     * @group integration
-     */
+    #[Group('integration')]
     public function testRealServiceInteraction(): void
     {
         // Insert cassette for recording/replay
@@ -213,7 +209,9 @@ the test itself (`ClientConfiguration::test()` already does).
 2. **Use VCR**: Don't make real network calls in CI
 3. **Test Edge Cases**: Include boundary conditions and error scenarios
 4. **Mock External Dependencies**: Use PHPUnit mocks for unit tests
-5. **Group Related Tests**: Use `@group` annotations for organization
+5. **Group Related Tests**: Use `#[Group('name')]` attributes for organization. PHPUnit
+   metadata belongs in attributes, not doc-comments — doc-comment metadata is removed
+   in PHPUnit 12
 6. **Document Complex Tests**: Add comments explaining test scenarios
 7. **Maintain Cassettes**: Periodically refresh to catch API changes
 

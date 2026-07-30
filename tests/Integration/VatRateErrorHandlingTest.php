@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Integration;
 
+use PHPUnit\Framework\Attributes\Group;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\Client\ClientConfiguration;
 use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
@@ -28,19 +29,16 @@ use VCR\VCR;
  * </ns0:error></ns2:retrieveVatRatesFaultMsg></detail>
  * ```
  *
- * @group integration
- * @group network
- *
  * @package Netresearch\EuVatSdk\Tests\Integration
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
+#[Group('integration')]
+#[Group('network')]
 class VatRateErrorHandlingTest extends IntegrationTestCase
 {
     /**
      * Unknown member state codes are rejected by the service with TEDB-ERR-2
-     *
-     * @test
      */
     public function testInvalidCountryCodeError(): void
     {
@@ -67,8 +65,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
      *
      * VatRatesRequest rejects it in its own constructor, so no SOAP fault mapping
      * is involved and the cassette for this scenario is empty.
-     *
-     * @test
      */
     public function testEmptyMemberStatesError(): void
     {
@@ -89,8 +85,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
      * Dates beyond the accepted range never reach the service either
      *
      * VatRatesRequest caps the situation date at five years into the future.
-     *
-     * @test
      */
     public function testFutureDateError(): void
     {
@@ -109,8 +103,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
 
     /**
      * Non-EU country codes produce the same TEDB-ERR-2 fault
-     *
-     * @test
      */
     public function testNonEuCountryCodeError(): void
     {
@@ -135,8 +127,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
      *
      * The recorded response is a plain HTTP 200 with UK rate results, so the
      * service does not treat GB as an unknown member state.
-     *
-     * @test
      */
     public function testBrexitTransitionHandling(): void
     {
@@ -159,8 +149,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
 
     /**
      * A single unknown code rejects the whole request
-     *
-     * @test
      */
     public function testMixedValidInvalidCountryCodes(): void
     {
@@ -182,11 +170,9 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
 
     /**
      * Test timeout handling
-     *
-     * @test
-     * @group slow
-     * @group network
      */
+    #[Group('slow')]
+    #[Group('network')]
     public function testTimeoutHandling(): void
     {
         // Create a client with very short timeout
@@ -219,8 +205,6 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
 
     /**
      * Test handling of malformed SOAP response
-     *
-     * @test
      */
     public function testMalformedResponseHandling(): void
     {

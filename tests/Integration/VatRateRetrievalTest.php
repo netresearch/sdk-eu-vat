@@ -9,23 +9,21 @@ use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use Netresearch\EuVatSdk\DTO\Response\VatRate;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Integration tests for successful VAT rate retrieval scenarios
- *
- * @group integration
- * @group network
  *
  * @package Netresearch\EuVatSdk\Tests\Integration
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
+#[Group('integration')]
+#[Group('network')]
 class VatRateRetrievalTest extends IntegrationTestCase
 {
     /**
      * Test successful retrieval of VAT rates for a single member state
-     *
-     * @test
      */
     public function testRetrieveSingleCountryVatRates(): void
     {
@@ -66,8 +64,6 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
     /**
      * Test retrieval of VAT rates for multiple EU member states
-     *
-     * @test
      */
     public function testRetrieveMultipleCountriesVatRates(): void
     {
@@ -113,8 +109,6 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
     /**
      * Test retrieval with historical date (Brexit transition)
-     *
-     * @test
      */
     public function testRetrieveHistoricalVatRates(): void
     {
@@ -147,8 +141,6 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
     /**
      * Test retrieval with all current EU member states
-     *
-     * @test
      */
     public function testRetrieveAllEuMemberStatesVatRates(): void
     {
@@ -198,8 +190,6 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
     /**
      * Test decimal precision handling
-     *
-     * @test
      */
     public function testVatRateDecimalPrecision(): void
     {
@@ -260,8 +250,6 @@ class VatRateRetrievalTest extends IntegrationTestCase
      * results carry none. Both halves are asserted here: a real identifier and its
      * description must arrive intact, and the uncategorised standard rate must
      * report null without disturbing the rest of the response.
-     *
-     * @test
      */
     public function testRetrievedResultsCarryCategories(): void
     {

@@ -9,6 +9,7 @@ use Netresearch\EuVatSdk\DTO\Request\VatRatesRequest;
 use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use Netresearch\EuVatSdk\DTO\Response\VatRatesResponse;
 use Netresearch\EuVatSdk\Exception\VatServiceException;
+use PHPUnit\Framework\Attributes\Group;
 use Soap\ExtSoapEngine\AbusedClient;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use VCR\Util\SoapClient as VcrSoapClient;
@@ -28,12 +29,11 @@ use VCR\VCREvents;
  * instead of going through setupVcr(), so REFRESH_CASSETTES cannot turn a run of
  * this class into live traffic.
  *
- * @group integration
- *
  * @package Netresearch\EuVatSdk\Tests\Integration
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
+#[Group('integration')]
 class ServiceInteractionTest extends IntegrationTestCase
 {
     /**
@@ -87,8 +87,6 @@ class ServiceInteractionTest extends IntegrationTestCase
      * This is the guard against a per-item network call sneaking into the client:
      * 27 member states still have to travel in a single SOAP interaction. It also
      * pins the shape of the recorded data -- one row per rate type per member state.
-     *
-     * @test
      */
     public function testFullEuResponseIsRetrievedInASingleServiceCall(): void
     {
@@ -128,8 +126,6 @@ class ServiceInteractionTest extends IntegrationTestCase
      * This is the proof that the suite is offline: VCR runs in 'once' mode, so any
      * request whose SOAP body differs from a recording is rejected locally rather
      * than being forwarded to the EU VAT service.
-     *
-     * @test
      */
     public function testUnrecordedRequestIsRejectedInsteadOfReachingTheNetwork(): void
     {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
          bootstrap="tests/fixtures/vcr-bootstrap.php"
          cacheDirectory=".phpunit.cache"
          executionOrder="depends,defects"
@@ -17,9 +17,6 @@
         <testsuite name="integration">
             <directory>tests/Integration</directory>
         </testsuite>
-        <testsuite name="all">
-            <directory>tests</directory>
-        </testsuite>
     </testsuites>
 
     <coverage includeUncoveredFiles="true"
@@ -33,9 +30,9 @@
         </report>
     </coverage>
 
-    <source restrictDeprecations="true"
-            restrictNotices="true"
-            restrictWarnings="true">
+    <source restrictNotices="true"
+            restrictWarnings="true"
+            ignoreIndirectDeprecations="true">
         <include>
             <directory>src</directory>
         </include>
