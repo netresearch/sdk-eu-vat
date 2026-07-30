@@ -1,0 +1,31 @@
+name: Release
+
+# Creates the GitHub Release entry when an annotated version tag is pushed.
+# Packagist publishes the package itself from the tag via webhook, so there is
+# nothing to build or upload here.
+#
+# Tagging stays manual and signed:
+#   git tag -s vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z
+#
+# The reusable workflow rejects lightweight tags, which is how v1.0.0 ended up
+# as a bare commit ref rather than a tag object.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v2.0.1). Use to backfill a release for an existing tag."
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  release:
+    uses: netresearch/.github/.github/workflows/release-composer-package.yml@main
+    permissions:
+      contents: write
+    with:
+      tag: ${{ inputs.tag || '' }}
