@@ -5,11 +5,13 @@ integration tests that replay recorded service responses.
 
 ## Overview
 
-The test suite is organized into three main categories:
+The test suite is organized into two categories, plus the recorded data they replay:
 
 - **Unit Tests** (`tests/Unit/`): Fast, isolated tests for individual components
 - **Integration Tests** (`tests/Integration/`): Tests against the actual EU VAT service using php-vcr
-- **Fixtures** (`tests/fixtures/`): Test data, VCR cassettes, and data providers
+- **Fixtures** (`tests/fixtures/`): the VCR cassettes in `cassettes/`, plus `vcr-bootstrap.php`
+  (the PHPUnit bootstrap) and `vcr-config.php`. There is no shared fixture or data-provider
+  class: assertions are written against the recorded responses.
 
 ## Running Tests
 
@@ -28,14 +30,14 @@ The test suite is organized into three main categories:
 ./vendor/bin/phpunit --testsuite=integration
 ```
 
-### Specific Test Groups
-```bash
-# Run tests that don't require network access
-./vendor/bin/phpunit --exclude-group=network
+### Test Groups
 
-# Run slow tests
-./vendor/bin/phpunit --group=slow
-```
+`phpunit.xml` excludes the `network` and `slow` groups globally, so a plain run never
+needs network access and `--exclude-group=network` is redundant.
+
+Do not run `--group=slow`. Those tests are not cassette-backed: they call the live EU
+service. The group is excluded in `phpunit.xml`, and with `failOnEmptyTestSuite="true"`
+a selection that resolves to no tests is itself a failure.
 
 ## Integration Testing with php-vcr
 
@@ -63,13 +65,16 @@ REFRESH_CASSETTES=true ./vendor/bin/phpunit tests/Integration/VatRateRetrievalTe
 
 Configure test behavior with these environment variables:
 
-- `USE_PRODUCTION_ENDPOINT`: Set to `true` to test against production (default: `false` for test endpoint)
+- `USE_PRODUCTION_ENDPOINT`: Set to `true` to point `IntegrationTestCase` at the production
+  endpoint (default: `false`, i.e. the acceptance endpoint)
 - `REFRESH_CASSETTES`: Set to `true` to force re-recording of VCR cassettes
-- `DEBUG_TESTS`: Set to `true` to enable debug logging during tests
+
+Both are read by `tests/Integration/IntegrationTestCase.php` and defaulted in the `<php>`
+block of `phpunit.xml`.
 
 Example:
 ```bash
-USE_PRODUCTION_ENDPOINT=true DEBUG_TESTS=true ./vendor/bin/phpunit
+USE_PRODUCTION_ENDPOINT=true ./vendor/bin/phpunit --testsuite=integration
 ```
 
 ## Test Structure
@@ -140,11 +145,20 @@ class MyIntegrationTest extends IntegrationTestCase
     {
         // Insert cassette for recording/replay
         $this->insertCassette('my-test-cassette');
-        
+
         $request = new VatRatesRequest(['DE'], new DateTime('2024-01-01'));
         $response = $this->client->retrieveVatRates($request);
-        
-        $this->assertCount(1, $response->getResults());
+
+        // The service answers with one row per rate type (STANDARD, REDUCED,
+        // PARKING_RATE, ...), so even a single-country request returns several
+        // results. Never assert a row count as a proxy for the country count;
+        // assert on the rate type the test is actually about.
+        $standardRates = array_filter(
+            $response->getResults(),
+            static fn (VatRateResult $result): bool => $result->getRate()->isStandard()
+        );
+
+        $this->assertCount(1, $standardRates, 'DE has exactly one standard rate');
     }
 }
 ```
@@ -181,19 +195,17 @@ For continuous integration:
    - Refresh cassettes to record new responses
    - Update test assertions to match new API behavior
 
-### Debug Mode
-
-Enable detailed logging during tests:
+### Verbose Output
 
 ```bash
-DEBUG_TESTS=true ./vendor/bin/phpunit --testdox
+./vendor/bin/phpunit --testdox
 ```
 
-This will output:
-- SOAP request/response details
-- Performance metrics
-- VCR recording status
-- Detailed error information
+There is no debug switch for the test run itself. `DEBUG_TESTS` exists only in
+`tests/bootstrap.php`, which PHPUnit does not load (the bootstrap is
+`tests/fixtures/vcr-bootstrap.php`), and `phpunit.xml` pins it to `false` — setting it
+has no effect. To see SOAP detail, enable debug mode on the client configuration inside
+the test itself (`ClientConfiguration::test()` already does).
 
 ## Best Practices
 

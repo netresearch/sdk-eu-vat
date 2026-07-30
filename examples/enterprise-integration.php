@@ -56,11 +56,16 @@ class EnterpriseTelemetry implements TelemetryInterface
             'context' => $context,
         ];
         
-        // Log for observability
+        // Log for observability. The context keys are the ones the SDK actually
+        // supplies: member_states, situation_on, result_count and endpoint.
+        $memberStates = $context['member_states'] ?? null;
+
         $this->logger->info('VAT service request completed', [
             'operation' => $operation,
             'duration_ms' => round($duration * 1000, 2),
-            'countries_count' => $context['countries_count'] ?? null,
+            'member_states' => $memberStates,
+            'member_states_count' => is_array($memberStates) ? count($memberStates) : null,
+            'result_count' => $context['result_count'] ?? null,
             'success' => true,
         ]);
         
@@ -156,37 +161,77 @@ echo "   ✓ Custom telemetry implementation created\n";
 // Example 2: Dependency injection container setup
 echo "\n2. Setting up dependency injection:\n";
 
+/**
+ * Minimal service container.
+ *
+ * Services are keyed by the class or interface their factory returns. That keeps the
+ * container's own bookkeeping simple, and — because get() is annotated with the id as
+ * a class-string — static analysis knows the concrete type of every resolved service
+ * and can check how it is used, e.g. that factory arguments are passed in the right
+ * order. A container typed as `mixed` hides those mistakes until runtime.
+ */
 class VatServiceContainer
 {
-    /** @var array<string, callable> */
-    private array $services = [];
-    
+    /** @var array<class-string, callable(self): object> */
+    private array $factories = [];
+
+    /** @var array<class-string, object> */
+    private array $instances = [];
+
+    /**
+     * @param class-string           $id      Class or interface the factory returns.
+     * @param callable(self): object $factory Builder receiving the container itself.
+     */
     public function register(string $id, callable $factory): void
     {
-        $this->services[$id] = $factory;
+        $this->factories[$id] = $factory;
     }
-    
-    public function get(string $id): mixed
+
+    /**
+     * Resolve a service, building it at most once.
+     *
+     * Services are shared: a client and a monitoring endpoint that both ask for the
+     * telemetry sink must see the same object, or the metrics one records are invisible
+     * to the other.
+     *
+     * @template T of object
+     * @param  class-string<T> $id
+     * @return T
+     */
+    public function get(string $id): object
     {
-        if (!isset($this->services[$id])) {
-            throw new \InvalidArgumentException("Service '$id' not found");
+        if (!isset($this->instances[$id])) {
+            if (!isset($this->factories[$id])) {
+                throw new \InvalidArgumentException("Service '$id' not found");
+            }
+
+            $service = ($this->factories[$id])($this);
+
+            if (!$service instanceof $id) {
+                throw new \LogicException(
+                    sprintf('Factory for %s returned %s', $id, get_debug_type($service))
+                );
+            }
+
+            $this->instances[$id] = $service;
         }
-        
-        return $this->services[$id]($this);
+
+        /** @var T */
+        return $this->instances[$id];
     }
 }
 
 $container = new VatServiceContainer();
 
 // Register logger
-$container->register('logger', fn() => $logger);
+$container->register(Logger::class, fn() => $logger);
 
-// Register telemetry
-$container->register('telemetry', fn($c) => new EnterpriseTelemetry($c->get('logger')));
+// Register telemetry - the same sink the monitoring endpoint below reports from
+$container->register(EnterpriseTelemetry::class, fn() => $telemetry);
 
 // Register configuration
-$container->register('config', function($c) {
-    return ClientConfiguration::production($c->get('logger'))
+$container->register(ClientConfiguration::class, function (VatServiceContainer $c) {
+    return ClientConfiguration::production($c->get(Logger::class))
         ->withTimeout(30)
         ->withSoapOptions([
             'cache_wsdl' => WSDL_CACHE_DISK,
@@ -196,11 +241,11 @@ $container->register('config', function($c) {
 });
 
 // Register VAT client
-$container->register('vat_client', function($c) {
+$container->register(VatRetrievalClientInterface::class, function (VatServiceContainer $c) {
     return VatRetrievalClientFactory::createWithTelemetry(
-        $c->get('config'),
-        $c->get('logger'),
-        $c->get('telemetry')
+        $c->get(EnterpriseTelemetry::class),
+        $c->get(ClientConfiguration::class),
+        $c->get(Logger::class)
     );
 });
 
@@ -283,12 +328,14 @@ class EnterpriseVatService
             // Cache the results
             $this->cache[$cacheKey] = $results;
             
+            // Use the same context keys the SDK itself reports, so one telemetry
+            // implementation can read both its own and the SDK's records.
             $this->telemetry->recordRequest(
                 'get_vat_rates',
                 microtime(true) - $startTime,
                 [
-                    'countries_count' => count($countries),
-                    'results_count' => count($results),
+                    'member_states' => $countries,
+                    'result_count' => count($results),
                     'cached' => false,
                 ]
             );
@@ -296,11 +343,13 @@ class EnterpriseVatService
             return $results;
             
         } catch (VatServiceException $e) {
+            // The SDK records the exception's short class name as $errorType, not the
+            // FQCN - match it so both sources produce the same metric labels.
             $this->telemetry->recordError(
                 'get_vat_rates',
-                get_class($e),
+                (new \ReflectionClass($e))->getShortName(),
                 [
-                    'countries' => $countries,
+                    'member_states' => $countries,
                     'error_message' => $e->getMessage(),
                 ]
             );
@@ -345,9 +394,9 @@ class EnterpriseVatService
 }
 
 $vatService = new EnterpriseVatService(
-    $container->get('vat_client'),
-    $container->get('telemetry'),
-    $container->get('logger')
+    $container->get(VatRetrievalClientInterface::class),
+    $container->get(EnterpriseTelemetry::class),
+    $container->get(Logger::class)
 );
 
 echo "   ✓ Enterprise service wrapper created\n";
@@ -426,7 +475,7 @@ class VatServiceHealthCheck
     }
 }
 
-$healthCheck = new VatServiceHealthCheck($container->get('vat_client'), $logger);
+$healthCheck = new VatServiceHealthCheck($container->get(VatRetrievalClientInterface::class), $logger);
 $health = $healthCheck->check();
 
 echo "   Health check status: " . $health['status'] . "\n";
@@ -528,7 +577,7 @@ class VatServiceCircuitBreaker
     }
 }
 
-$circuitBreaker = new VatServiceCircuitBreaker($container->get('vat_client'), $logger);
+$circuitBreaker = new VatServiceCircuitBreaker($container->get(VatRetrievalClientInterface::class), $logger);
 
 echo "   ✓ Circuit breaker implemented\n";
 

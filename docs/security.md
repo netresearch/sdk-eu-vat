@@ -5,7 +5,9 @@
 - SOAP injection protection
 - Secure error message handling
 - TLS/SSL for all communications
-- No sensitive data in logs
+- Request logging limited to member state codes, dates and the endpoint URL — unless
+  debug mode is enabled, which makes ext-soap retain the full SOAP envelopes (see
+  [Logging](#logging))
 
 ## Security Updates
 This section will be updated with any security-related changes or advisories.
@@ -39,9 +41,14 @@ try {
 ```
 
 ### Logging
-The SDK ensures no sensitive data is logged, but verify your own logging configuration:
+The SDK's own log records carry only the member states, the requested date, the result
+count and the endpoint URL. Debug mode is the exception: it sets the ext-soap `trace`
+option, so the SOAP client keeps the complete request and response envelopes in memory
+for inspection. `ClientConfiguration::production()` has debug off and
+`ClientConfiguration::test()` has it on, so keep production configurations on the
+production factory — and verify your own logging configuration:
 
 ```php
 $config = ClientConfiguration::production($logger)
-    ->withDebugMode(false); // Disable debug in production
+    ->withDebug(false); // Off by default for production(); on for test()
 ```

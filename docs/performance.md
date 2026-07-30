@@ -1,9 +1,16 @@
 # Performance Guide
 
-## Benchmarks
-- Typical response time: ~10ms for single country requests
-- Memory usage: ~2MB for full EU member state queries
-- WSDL caching reduces initialization by ~100ms
+## Performance characteristics
+
+No benchmark figures are published for this SDK: none are measured in CI, and the
+numbers that matter are dominated by things outside the library.
+
+- Response time is dominated by the round trip to the EU service, not by SDK overhead
+- Memory scales with the number of result rows (one row per rate type per member state)
+- WSDL caching removes the schema parse from every call after the first
+
+Measure against your own network and workload before deriving timeouts or SLOs from any
+of this.
 
 ## Optimization Tips
 
@@ -47,5 +54,8 @@ $config = ClientConfiguration::production($logger)
 The SDK is designed for efficiency:
 - DTOs are immutable to prevent memory leaks
 - BigDecimal objects are lightweight
-- SOAP client reuses connections
 - No persistent state between requests
+
+Connections are not pooled or kept alive: each client owns one ext-soap client, and
+every call is a fresh HTTP request. Reuse a single client instance rather than building
+one per call, so the WSDL is parsed once.

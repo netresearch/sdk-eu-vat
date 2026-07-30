@@ -133,12 +133,15 @@ try {
     $results = $response->getResults();
     echo "   Total results: " . count($results) . "\n";
 
-    // Find specific country
+    // Find one specific row. The service returns one row per rate type (STANDARD,
+    // REDUCED, PARKING_RATE, ...) per member state, so the rate type has to be
+    // selected explicitly - taking the first row for a country would print whichever
+    // rate type happened to come first.
     foreach ($results as $result) {
-        if ($result->getMemberState() === 'DE') {
+        if ($result->getMemberState() === 'DE' && $result->getRate()->isStandard()) {
             $vatRate = $result->getRate();
-            
-            echo "   Germany details:\n";
+
+            echo "   Germany, standard rate:\n";
             echo "     - Country: " . $result->getMemberState() . "\n";
             echo "     - Type: " . $vatRate->getType() . "\n";
             echo "     - Date: " . $result->getSituationOn()->format('Y-m-d') . "\n";

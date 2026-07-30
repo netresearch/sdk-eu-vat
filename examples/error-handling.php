@@ -130,26 +130,25 @@ try {
 }
 
 // Example 5: Future date handling
-echo "\n5. Testing future date handling:\n";
+echo "\n5. Testing future date handling (local five-year cap):\n";
 
 try {
+    // VatRatesRequest caps situationOn at five years in the future, so this date is
+    // rejected while the request object is being built: no SOAP call is made and the
+    // failure is a ValidationException, not an InvalidRequestException from the service.
     $futureDate = new DateTime('+10 years');
-    
+
     $request = new VatRatesRequest(
         memberStates: ['DE'],
         situationOn: $futureDate
     );
-    
+
     $response = $client->retrieveVatRates($request);
-    
-    if (count($response->getResults()) > 0) {
-        echo "   Service returned results for future date (behavior may vary)\n";
-    } else {
-        echo "   Service returned empty results for future date\n";
-    }
-    
-} catch (InvalidRequestException $e) {
-    echo "   ✓ Service rejected future date\n";
+
+    echo "   Unexpected success - the SDK should have rejected this date locally\n";
+
+} catch (ValidationException $e) {
+    echo "   ✓ SDK rejected the date locally, no request was sent\n";
     echo "     Message: " . $e->getMessage() . "\n";
 }
 
@@ -229,6 +228,12 @@ function handleVatServiceError(VatServiceException $e, Logger $logger): void
     }
     
     switch (true) {
+        case $e instanceof ValidationException:
+            echo "   📋 Local Validation Error: " . $e->getMessage() . "\n";
+            echo "      Action: Fix the request before calling the service - nothing was sent\n";
+            $logger->warning('Request rejected by local validation', $errorContext);
+            break;
+
         case $e instanceof InvalidRequestException:
             echo "   📋 Invalid Request: " . $e->getMessage() . "\n";
             echo "      Action: Check your country codes and date format\n";

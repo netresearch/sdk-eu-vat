@@ -89,7 +89,7 @@ try {
 }
 
 // Example 2: Historical analysis (multiple dates)
-echo "\n2. Historical VAT rate analysis:\n";
+echo "\n2. Historical standard VAT rate analysis:\n";
 
 $analysisCountries = ['DE', 'FR', 'IT', 'ES', 'NL'];
 $analysisDates = [
@@ -114,9 +114,18 @@ foreach ($analysisDates as $dateString) {
         $response = $client->retrieveVatRates($request);
         
         foreach ($response->getResults() as $result) {
+            // The service returns one row per rate type (STANDARD, REDUCED,
+            // PARKING_RATE, ...) for each member state. This table tracks the standard
+            // rate, so select it explicitly - keying purely on the member state would
+            // silently keep whichever row happened to arrive last.
+            $vatRate = $result->getRate();
+            if (!$vatRate->isStandard()) {
+                continue;
+            }
+
             $country = $result->getMemberState();
             // May be null for rate types that carry no percentage.
-            $rate = $result->getRate()->getRawValue();
+            $rate = $vatRate->getRawValue();
 
             if (!isset($historicalData[$country])) {
                 $historicalData[$country] = [];
@@ -133,7 +142,7 @@ foreach ($analysisDates as $dateString) {
 }
 
 // Display historical analysis
-echo "\n   Historical VAT rate trends:\n";
+echo "\n   Historical standard VAT rate trends:\n";
 foreach ($historicalData as $country => $dates) {
     echo "     $country: ";
     $rates = [];

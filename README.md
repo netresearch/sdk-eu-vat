@@ -188,10 +188,10 @@ composer test:integration
 composer analyse
 
 # Run code style checks
-composer cs:check
+composer cs-check
 
 # Fix code style issues
-composer cs:fix
+composer cs-fix
 ```
 
 ### Test Environment
@@ -201,9 +201,6 @@ Integration tests use [php-vcr](https://github.com/php-vcr/php-vcr) to record an
 ```bash
 # Refresh recorded cassettes with live service calls
 REFRESH_CASSETTES=true composer test:integration
-
-# Enable debug output for tests
-DEBUG_TESTS=true composer test
 ```
 
 ## Examples
@@ -276,9 +273,10 @@ class VatServiceProvider extends ServiceProvider
 The SDK is optimized for production use:
 
 - **WSDL Caching**: Automatic WSDL caching reduces initialization overhead
-- **Connection Reuse**: Efficient SOAP connection handling
 - **Memory Efficient**: Optimized DTOs and response handling for efficient batch processing
-- **Benchmarks**: ~10ms typical response time for single country requests
+- **One Client, Many Calls**: Reuse a client instance so the WSDL is parsed once; connections themselves are not pooled
+
+No benchmark numbers are published — response time is dominated by the EU service itself. See [docs/performance.md](docs/performance.md).
 
 ### Recommended Production Settings
 
