@@ -51,6 +51,3 @@ parameters:
     # Ensure proper type declarations
     reportUnmatchedIgnoredErrors: false
     
-    # Bootstrap file for custom rules
-    bootstrapFiles:
-        - tests/bootstrap.php

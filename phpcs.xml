@@ -12,7 +12,6 @@
     <!-- Exclude vendor and generated files -->
     <exclude-pattern>vendor/*</exclude-pattern>
     <exclude-pattern>tests/fixtures/cassettes/*</exclude-pattern>
-    <exclude-pattern>tests/bootstrap.php</exclude-pattern>
     <exclude-pattern>tests/benchmark.php</exclude-pattern>
     <exclude-pattern>tests/validate-package.php</exclude-pattern>
     <exclude-pattern>tests/security-review.php</exclude-pattern>

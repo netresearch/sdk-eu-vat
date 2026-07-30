@@ -58,6 +58,20 @@ code, so the next release is a major version. Read "Breaking changes" before upg
   success and `recordError()` on failure, so an implementation that was silently idle
   will start receiving calls. An exception thrown by a telemetry implementation is
   logged and swallowed: metrics cannot fail a VAT lookup.
+- **Rate categories are populated, and they live on the result.**
+  `VatRatesResponse::getResultsByCategory()` could only ever return an empty array: the
+  converter hardcoded the category to `null`. It is now read from the response.
+  `VatRetrievalServiceType.xsd` places `category` on `vatRateResults` as a sibling of
+  `rate` rather than inside it, so it is exposed as `VatRateResult::getCategory()` (the
+  identifier, for example `FOODSTUFFS`) and `VatRateResult::getCategoryDescription()`
+  (the text the service sends with it). Both are `null` when the service reported no
+  category, which the schema permits and which standard rates never carry.
+  `VatRate::getCategory()` and the third `VatRate` constructor argument are **removed**:
+  they modelled the data on the wrong object and could only return `null`. Replace
+  `$result->getRate()->getCategory()` with `$result->getCategory()`. The identifiers are
+  defined in the TEDB External Interface Specification, not in the schema, so an
+  unrecognised identifier passed to `getResultsByCategory()` returns `[]` rather than
+  raising an error.
 - **`symfony/event-dispatcher` and `ramsey/uuid` are no longer required.** Nothing in
   the SDK used them once the event layer and `CorrelationIdProvider` were gone. Projects
   relying on them transitively through this package must require them directly.
@@ -101,8 +115,9 @@ code, so the next release is a major version. Read "Breaking changes" before upg
 - PHP 8.4 to the CI test and static-analysis matrices
 - The `network` test group runs in CI, replaying committed cassettes offline; it was
   previously excluded everywhere, which is how the broken fault mapping stayed hidden
-- `examples/` is covered by static analysis, so documentation code cannot drift from
-  the API it demonstrates
+- `examples/` is covered by static analysis, which catches an example calling a method
+  that does not exist. It cannot catch everything: a value the example itself types as
+  `mixed` hides an argument mismatch from the analyser
 
 ### Changed
 
@@ -112,8 +127,6 @@ code, so the next release is a major version. Read "Breaking changes" before upg
 - Replaced generic contact emails with GitHub references
 - Integration tests are enforced in CI instead of being advisory
 - CI installs dependencies fresh from composer.json (composer.lock is no longer committed)
-- `symfony/event-dispatcher` accepts `^6.0 || ^7.0`; v8 requires PHP >= 8.4 and stays
-  excluded while the floor is PHP 8.2
 - `php-vcr/php-vcr` constrained to `>=1.6.4 <1.8.2`: from 1.8.2 its `SoapClient`
   declares a parameter the ext-soap-engine releases installable on PHP 8.2 and 8.3
   do not, which is a fatal error rather than a test failure

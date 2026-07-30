@@ -15,8 +15,13 @@
  * VAT service instead. Turning VCR on here, before any test file is loaded,
  * guarantees the transport is patched for the whole process.
  *
- * With VCR on and no cassette inserted, an unexpected request fails loudly instead
- * of leaving the machine, which is exactly what the unit suite wants.
+ * What this guarantees is the class rewriting, which is permanent once it has
+ * happened. It is not a standing safety net: IntegrationTestCase::tearDown() calls
+ * VCR::turnOff(), and only its own setUp() turns VCR back on, so tests that run
+ * after an integration test without extending that class execute with the hooks
+ * disabled. Nothing in the unit suite issues a SOAP request today, and
+ * ServiceInteractionTest asserts the rewriting is in force, but do not read this
+ * bootstrap as a guarantee that a stray request cannot leave the machine.
  *
  * @package Netresearch\EuVatSdk\Tests
  * @author  Netresearch DTT GmbH
