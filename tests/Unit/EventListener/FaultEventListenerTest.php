@@ -8,6 +8,7 @@ use Netresearch\EuVatSdk\EventListener\FaultEventListener;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\ServiceUnavailableException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use SoapFault;
@@ -139,9 +140,8 @@ class FaultEventListenerTest extends TestCase
      * service response: a proxy or captive portal answering with HTML, a truncated
      * body, an encoding failure. No request was rejected, and the condition is
      * usually transient, so the retryable exception is the correct contract.
-     *
-     * @dataProvider localExtSoapFailureProvider
      */
+    #[DataProvider('localExtSoapFailureProvider')]
     public function testLocalExtSoapFailureMapsToServiceUnavailableException(string $faultString): void
     {
         $fault = new SoapFault('Client', $faultString);

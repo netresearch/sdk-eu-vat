@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Integration;
 
+use PHPUnit\Framework\Attributes\Group;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
 use Netresearch\EuVatSdk\Client\SoapVatRetrievalClient;
@@ -23,19 +24,16 @@ use DateTime;
  * This test validates the entire SDK from installation to production usage,
  * including error handling, performance characteristics, and edge cases.
  *
- * @group integration
- * @group e2e
- *
  * @package Netresearch\EuVatSdk\Tests\Integration
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
  */
+#[Group('integration')]
+#[Group('e2e')]
 class EndToEndTest extends IntegrationTestCase
 {
     /**
      * Test complete workflow: installation to API call
-     *
-     * @test
      */
     public function testCompleteWorkflowFromInstallationToApiCall(): void
     {
@@ -72,8 +70,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test all supported PHP versions behavior
-     *
-     * @test
      */
     public function testPhpVersionCompatibility(): void
     {
@@ -111,10 +107,8 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test memory usage with large datasets
-     *
-     * @test
-     * @group performance
      */
+    #[Group('performance')]
     public function testMemoryUsageWithLargeDatasets(): void
     {
         $this->setupVcr('e2e-memory-usage');
@@ -154,10 +148,8 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test concurrent request handling
-     *
-     * @test
-     * @group performance
      */
+    #[Group('performance')]
     public function testConcurrentRequestHandling(): void
     {
         $this->setupVcr('e2e-concurrent-requests');
@@ -191,8 +183,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test error handling completeness
-     *
-     * @test
      */
     public function testComprehensiveErrorHandling(): void
     {
@@ -240,8 +230,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test BigDecimal precision in financial calculations
-     *
-     * @test
      */
     public function testFinancialCalculationPrecision(): void
     {
@@ -283,8 +271,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test different client configurations
-     *
-     * @test
      */
     public function testVariousClientConfigurations(): void
     {
@@ -345,10 +331,8 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test SOAP client optimization features
-     *
-     * @test
-     * @group performance
      */
+    #[Group('performance')]
     public function testSoapClientOptimizations(): void
     {
         $this->setupVcr('e2e-soap-optimizations');
@@ -390,8 +374,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test environment-specific behaviors
-     *
-     * @test
      */
     public function testEnvironmentSpecificBehaviors(): void
     {
@@ -427,8 +409,6 @@ class EndToEndTest extends IntegrationTestCase
 
     /**
      * Test edge cases and boundary conditions
-     *
-     * @test
      */
     public function testEdgeCasesAndBoundaryConditions(): void
     {

@@ -8,6 +8,7 @@ use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Netresearch\EuVatSdk\Converter\VatRatesResponseConverter;
 use Netresearch\EuVatSdk\Exception\ConversionException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -64,9 +65,8 @@ class VatRatesResponseConverterTest extends TestCase
      * minOccurs="0" inside rateValueType, which applies to every member of
      * rateValueTypeEnum. A missing value is schema-valid for any rate type,
      * so conversion must yield a VatRate with a null value instead of failing.
-     *
-     * @dataProvider provideRateTypes
      */
+    #[DataProvider('provideRateTypes')]
     public function testConvertsRateWithoutValueForAnyRateType(string $rateType): void
     {
         $response = new stdClass();
@@ -255,9 +255,8 @@ class VatRatesResponseConverterTest extends TestCase
     /**
      * A malformed category (element present but without a usable identifier) must
      * degrade to null instead of aborting the whole response.
-     *
-     * @dataProvider malformedCategoryProvider
      */
+    #[DataProvider('malformedCategoryProvider')]
     public function testMalformedCategoryDegradesToNull(?string $identifier, ?string $description): void
     {
         $result = $this->attachCategory(

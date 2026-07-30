@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `phpunit/phpunit` raised to `^11.5.56`. PHPUnit metadata moved from doc-comments to
+  attributes, because doc-comment metadata is removed in PHPUnit 12. `@test` was
+  dropped rather than converted — every annotated method is already `test`-prefixed,
+  so PHPUnit discovers it by name
+- Removed the `all` PHPUnit test suite. It re-collected files already claimed by the
+  `unit` and `integration` suites, so every test in the `--group network` CI step ran
+  twice (26 executions for 13 tests). PHPUnit 11 reports the overlap as a warning,
+  which `failOnWarning` turns into a failure. Nothing referenced the suite
 - `php-vcr/php-vcr` widened to `>=1.6.4 <1.12`. The `<1.8.2` cap recorded under 2.0.0
   is obsolete: `php-soap/ext-soap-engine` declares the `$uriParserClass` parameter
   itself as of 1.12.0, and the `SoapClient` test doubles now accept it. 1.11 also
