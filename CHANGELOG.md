@@ -11,9 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`brick/math` now requires `^0.18`**, where `^0.11 || ^0.12` was previously accepted.
   Consumers pinned to 0.11 or 0.12 cannot install this release. The SDK exposes
-  `BigDecimal` through `VatRate::getDecimalValue()`, so the two cannot be spanned
-  silently. 0.13 renamed the `RoundingMode` enum cases from `HALF_UP` to `HalfUp`;
-  code passing a rounding mode to a `BigDecimal` obtained from this SDK must follow
+  `BigDecimal` through `VatRate::getValue()` and `VatRate::getDecimalValue()`, so the
+  ranges cannot be spanned silently. 0.14.8 renamed the `RoundingMode` enum cases from
+  `HALF_UP` to `HalfUp`, so code that passes a rounding mode to a `BigDecimal` obtained
+  from this SDK — for example `$rate->getDecimalValue()->dividedBy('100', 2,
+  RoundingMode::HalfUp)` — must use the new spelling. `src/` itself never referenced
+  `RoundingMode`; only the integration suite did
 
 ### Changed
 
@@ -31,7 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   installable on 8.2 and its `AbusedClient::__doRequest()` does not declare that
   parameter, so php-vcr 1.8.2+ fatals against it. 1.8.0 onwards requires PHP 8.3+.
   The cap can be lifted once the floor moves off 8.2, and the test doubles are already
-  prepared for it
+  prepared for it. Note the cost of keeping it: `php: ^8.2` admits PHP 8.5, but
+  php-vcr 1.8.1 stops at 8.4, so the dev toolchain cannot be installed on 8.5
 
 ## [2.0.0] - 2026-07-30
 
