@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-30
+
 This release corrects the SOAP request encoding, the response conversion and the
 exception contract. Each of those changes alters observable behaviour for existing
-code, so the next release is a major version. Read "Breaking changes" before upgrading.
+code, which is why it is a major version. Read "Breaking changes" before upgrading.
 
 ### Breaking changes
 
