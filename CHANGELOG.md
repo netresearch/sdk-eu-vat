@@ -25,11 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `unit` and `integration` suites, so every test in the `--group network` CI step ran
   twice (26 executions for 13 tests). PHPUnit 11 reports the overlap as a warning,
   which `failOnWarning` turns into a failure. Nothing referenced the suite
-- `php-vcr/php-vcr` widened to `>=1.6.4 <1.12`. The `<1.8.2` cap recorded under 2.0.0
-  is obsolete: `php-soap/ext-soap-engine` declares the `$uriParserClass` parameter
-  itself as of 1.12.0, and the `SoapClient` test doubles now accept it. 1.11 also
-  supports PHP 8.5, which 1.8.1 does not, so the old cap would have blocked the first
-  developer to move to 8.5. Cassettes are unaffected
+- The `SoapClient` test doubles accept php-vcr's optional `$uriParserClass` parameter.
+  The `php-vcr/php-vcr` cap at `<1.8.2` is **retained**: raising it is impossible while
+  PHP 8.2 is supported, because `php-soap/ext-soap-engine` 1.7.0 is the only release
+  installable on 8.2 and its `AbusedClient::__doRequest()` does not declare that
+  parameter, so php-vcr 1.8.2+ fatals against it. 1.8.0 onwards requires PHP 8.3+.
+  The cap can be lifted once the floor moves off 8.2, and the test doubles are already
+  prepared for it
 
 ## [2.0.0] - 2026-07-30
 
