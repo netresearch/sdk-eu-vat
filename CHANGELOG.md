@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- **`brick/math` now requires `^0.18`**, where `^0.11 || ^0.12` was previously accepted.
+  Consumers pinned to 0.11 or 0.12 cannot install this release. The SDK exposes
+  `BigDecimal` through `VatRate::getDecimalValue()`, so the two cannot be spanned
+  silently. 0.13 renamed the `RoundingMode` enum cases from `HALF_UP` to `HalfUp`;
+  code passing a rounding mode to a `BigDecimal` obtained from this SDK must follow
+
 ### Changed
 
 - `php-vcr/php-vcr` widened to `>=1.6.4 <1.12`. The `<1.8.2` cap recorded under 2.0.0

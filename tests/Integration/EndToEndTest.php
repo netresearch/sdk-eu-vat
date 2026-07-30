@@ -262,7 +262,7 @@ class EndToEndTest extends IntegrationTestCase
             // Test financial calculations
             $netAmount = BigDecimal::of('999.99');
             $vatAmount = $netAmount->multipliedBy($decimalValue)
-                ->dividedBy('100', 2, RoundingMode::HALF_UP);
+                ->dividedBy('100', 2, RoundingMode::HalfUp);
             $grossAmount = $netAmount->plus($vatAmount);
 
             // Verify calculations maintain precision
