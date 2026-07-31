@@ -41,7 +41,7 @@ class ClientConfigurationTest extends TestCase
 
     public function testProductionWithCustomLogger(): void
     {
-        $logger = $this->createMock(LoggerInterface::class);
+        $logger = $this->createStub(LoggerInterface::class);
         $config = ClientConfiguration::production($logger);
 
         $this->assertSame($logger, $config->logger);
@@ -82,7 +82,7 @@ class ClientConfigurationTest extends TestCase
     public function testWithLoggerImmutability(): void
     {
         $original = ClientConfiguration::production();
-        $testLogger = $this->createMock(LoggerInterface::class);
+        $testLogger = $this->createStub(LoggerInterface::class);
         $modified = $original->withLogger($testLogger);
 
         // Original should be unchanged
@@ -133,7 +133,7 @@ class ClientConfigurationTest extends TestCase
 
     public function testChainedWithMethods(): void
     {
-        $logger = $this->createMock(LoggerInterface::class);
+        $logger = $this->createStub(LoggerInterface::class);
         $telemetry = new NullTelemetry();
 
         $config = ClientConfiguration::production()
@@ -156,7 +156,6 @@ class ClientConfigurationTest extends TestCase
         // Use reflection to test private constructor with invalid endpoint
         $reflection = new \ReflectionClass(ClientConfiguration::class);
         $constructor = $reflection->getConstructor();
-        $constructor->setAccessible(true);
 
         $constructor->invoke(
             $reflection->newInstanceWithoutConstructor(),

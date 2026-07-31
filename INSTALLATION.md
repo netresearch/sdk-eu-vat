@@ -8,10 +8,10 @@ This SDK requires the `soap` and `libxml` PHP extensions.
 
 ```bash
 sudo apt-get update
-sudo apt-get install php8.2-soap php8.2-xml
+sudo apt-get install php8.4-soap php8.4-xml
 
-# For PHP 8.3, adjust the version number accordingly
-sudo apt-get install php8.3-soap php8.3-xml
+# For PHP 8.5, adjust the version number accordingly
+sudo apt-get install php8.5-soap php8.5-xml
 ```
 
 ### CentOS/RHEL/Fedora
@@ -27,16 +27,16 @@ sudo yum install php-soap php-xml
 ### Alpine Linux
 
 ```bash
-apk add php82-soap php82-xml
+apk add php84-soap php84-xml
 
-# For PHP 8.3, adjust the version number accordingly
-apk add php83-soap php83-xml
+# For PHP 8.5, adjust the version number accordingly
+apk add php85-soap php85-xml
 ```
 
 ### macOS (Homebrew)
 
 ```bash
-brew install php@8.2
+brew install php@8.4
 
 # Extensions are usually included, but verify they're enabled
 php -m | grep -E '(soap|libxml)'
@@ -99,6 +99,6 @@ composer config --global https-proxy https://proxy.company.com:8080
 
 If you continue to experience installation problems after following this guide, please:
 
-1. Check that your PHP version is 8.2 or higher: `php -v`
+1. Check that your PHP version is 8.4 or higher: `php -v`
 2. Verify all required extensions are loaded: `php -m | grep -E '(soap|libxml)'`
 3. Review the [README.md](README.md) for usage examples once installation is complete

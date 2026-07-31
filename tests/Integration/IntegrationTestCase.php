@@ -81,7 +81,7 @@ abstract class IntegrationTestCase extends TestCase
 
         if ($useProductionEndpoint) {
             // Create sandbox client but with production endpoint for testing
-            $config = ClientConfiguration::test(null)
+            $config = ClientConfiguration::test()
                 ->withEndpoint(ClientConfiguration::ENDPOINT_PRODUCTION)
                 ->withTimeout(15)
                 ->withDebug(true);
@@ -207,7 +207,7 @@ abstract class IntegrationTestCase extends TestCase
     protected function getDefaultCassetteName(): string
     {
         // Simple fallback - use class name and timestamp
-        $className = (new \ReflectionClass($this))->getShortName();
+        $className = new \ReflectionClass($this)->getShortName();
         $className = str_replace('Test', '', $className);
 
         return strtolower($className) . '/default_test_' . time();

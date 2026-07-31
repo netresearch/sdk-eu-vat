@@ -23,7 +23,6 @@ use Soap\ExtSoapEngine\ExtSoapOptions;
 use Soap\ExtSoapEngine\Transport\ExtSoapClientTransport;
 use Soap\ExtSoapEngine\Exception\RequestException;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Netresearch\EuVatSdk\EventListener\FaultEventListener;
 use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
 
@@ -52,7 +51,7 @@ use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
  * $response = $client->retrieveVatRates($request);
  * ```
  *
- * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  * Note: High coupling is justified as this is a central integration point that orchestrates
  * SOAP engine, DTOs, exceptions, type converters, logging, and WSDL validation.
  * Future refactoring should extract concerns like DTO mapping, exception handling,
@@ -67,12 +66,12 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     /**
      * Default path to local WSDL file
      */
-    private const LOCAL_WSDL_PATH = __DIR__ . '/../../resources/VatRetrievalService.wsdl';
+    private const string LOCAL_WSDL_PATH = __DIR__ . '/../../resources/VatRetrievalService.wsdl';
 
     /**
      * Remote WSDL URL for fallback
      */
-    private const REMOTE_WSDL_URL = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService.wsdl';
+    private const string REMOTE_WSDL_URL = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService.wsdl';
 
     /**
      * SOAP engine instance for making requests
@@ -97,7 +96,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     /**
      * Operation name reported to telemetry
      */
-    private const OPERATION = 'retrieveVatRates';
+    private const string OPERATION = 'retrieveVatRates';
 
 
     /**
@@ -113,7 +112,7 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
         ?Engine $engine = null,
         private readonly VatRatesResponseConverter $responseConverter = new VatRatesResponseConverter()
     ) {
-        $this->logger = $this->config->logger ?? new NullLogger();
+        $this->logger = $this->config->logger;
         $this->telemetry = $this->config->telemetry;
         $this->faultListener = new FaultEventListener($this->logger);
         $this->engine = $engine ?? $this->initializeEngine();
@@ -187,7 +186,6 @@ class SoapVatRetrievalClient implements VatRetrievalClientInterface
     private function performRequest(VatRatesRequest $request): VatRatesResponse
     {
         try {
-            /** @var \stdClass $responseObject */
             $responseObject = $this->engine->request('retrieveVatRates', [$request]);
 
             // Convert stdClass response to strongly-typed DTO using dedicated converter

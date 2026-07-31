@@ -22,8 +22,8 @@ class VatRetrievalClientFactoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->logger = $this->createMock(LoggerInterface::class);
-        $this->telemetry = $this->createMock(TelemetryInterface::class);
+        $this->logger = $this->createStub(LoggerInterface::class);
+        $this->telemetry = $this->createStub(TelemetryInterface::class);
     }
 
     public function testCreateReturnsDefaultClient(): void

@@ -31,31 +31,31 @@ class SoapVatRetrievalClientTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->logger = $this->createStub(LoggerInterface::class);
         $this->config = ClientConfiguration::test($this->logger)
             ->withTimeout(30);
     }
 
     public function testImplementsVatRetrievalClientInterface(): void
     {
-        $mockEngine = $this->createMock(Engine::class);
-        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+        $engineStub = $this->createStub(Engine::class);
+        $client = new SoapVatRetrievalClient($this->config, $engineStub);
 
         $this->assertInstanceOf(VatRetrievalClientInterface::class, $client);
     }
 
     public function testConstructorInitializesEngine(): void
     {
-        $mockEngine = $this->createMock(Engine::class);
-        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+        $engineStub = $this->createStub(Engine::class);
+        $client = new SoapVatRetrievalClient($this->config, $engineStub);
 
         $this->assertInstanceOf(Engine::class, $client->getEngine());
     }
 
     public function testGetConfigurationReturnsCorrectConfig(): void
     {
-        $mockEngine = $this->createMock(Engine::class);
-        $client = new SoapVatRetrievalClient($this->config, $mockEngine);
+        $engineStub = $this->createStub(Engine::class);
+        $client = new SoapVatRetrievalClient($this->config, $engineStub);
 
         $this->assertSame($this->config, $client->getConfiguration());
     }
@@ -304,10 +304,10 @@ class SoapVatRetrievalClientTest extends TestCase
         $debugConfig = ClientConfiguration::test($this->logger)
             ->withDebug(true);
 
-        $mockEngine = $this->createMock(Engine::class);
+        $engineStub = $this->createStub(Engine::class);
 
         // This test verifies that the client initializes successfully with debug mode
-        $client = new SoapVatRetrievalClient($debugConfig, $mockEngine);
+        $client = new SoapVatRetrievalClient($debugConfig, $engineStub);
 
         $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
     }
@@ -316,8 +316,8 @@ class SoapVatRetrievalClientTest extends TestCase
     {
         $productionConfig = ClientConfiguration::production($this->logger);
 
-        $mockEngine = $this->createMock(Engine::class);
-        $client = new SoapVatRetrievalClient($productionConfig, $mockEngine);
+        $engineStub = $this->createStub(Engine::class);
+        $client = new SoapVatRetrievalClient($productionConfig, $engineStub);
 
         $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
     }
@@ -334,8 +334,8 @@ class SoapVatRetrievalClientTest extends TestCase
             ->withSoapOptions($customOptions)
             ->withTimeout(60);
 
-        $mockEngine = $this->createMock(Engine::class);
-        $client = new SoapVatRetrievalClient($config, $mockEngine);
+        $engineStub = $this->createStub(Engine::class);
+        $client = new SoapVatRetrievalClient($config, $engineStub);
 
         $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
     }

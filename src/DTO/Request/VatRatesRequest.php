@@ -79,7 +79,10 @@ final class VatRatesRequest
     /**
      * Validate and normalize member state codes
      *
-     * @param array<string> $memberStates
+     * The parameter is typed as mixed values because this is the boundary that
+     * turns unvalidated caller input into the documented array<string> contract.
+     *
+     * @param array<mixed> $memberStates
      * @throws ValidationException
      */
     private function validateAndNormalizeMemberStates(array $memberStates): void

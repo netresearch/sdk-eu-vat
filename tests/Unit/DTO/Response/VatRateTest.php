@@ -20,9 +20,8 @@ class VatRateTest extends TestCase
 
         $this->assertEquals('STANDARD', $rate->getType());
         $this->assertEquals('19.0', $rate->getValue());
-        $this->assertInstanceOf(BigDecimal::class, $rate->getDecimalValue());
-        $this->assertEquals('19.0', $rate->getDecimalValue()->__toString());
-        $this->assertEquals(19.0, $rate->getValueAsFloat());
+        $this->assertInstanceOf(BigDecimal::class, $rate->getValue());
+        $this->assertEquals('19.0', $rate->getValue()->__toString());
 
         $this->assertTrue($rate->isStandard());
         $this->assertFalse($rate->isReduced());
@@ -131,9 +130,7 @@ class VatRateTest extends TestCase
 
         $this->assertTrue($rate->isExempt());
         $this->assertNull($rate->getValue());
-        $this->assertNull($rate->getDecimalValue());
         $this->assertNull($rate->getRawValue());
-        $this->assertNull($rate->getValueAsFloat());
         $this->assertEquals('', (string) $rate);
     }
 
@@ -163,9 +160,8 @@ class VatRateTest extends TestCase
     {
         $rate = new VatRate('STANDARD', '19.75');
 
-        $decimalValue = $rate->getDecimalValue();
+        $decimalValue = $rate->getValue();
         $this->assertInstanceOf(BigDecimal::class, $decimalValue);
-        $this->assertEquals('19.75', $rate->getValue());
         $this->assertEquals('19.75', $decimalValue->__toString());
 
         // Test calculation precision

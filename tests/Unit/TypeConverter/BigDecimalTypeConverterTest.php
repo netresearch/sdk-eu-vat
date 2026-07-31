@@ -251,7 +251,7 @@ class BigDecimalTypeConverterTest extends TestCase
             'typemap' => [[
                 'type_ns' => $converter->getTypeNamespace(),
                 'type_name' => $converter->getTypeName(),
-                'from_xml' => static fn (string $xml): ?BigDecimal => $converter->convertXmlToPhp($xml),
+                'from_xml' => $converter->convertXmlToPhp(...),
             ]],
             'location' => 'http://localhost/unused',
         ]) extends \SoapClient {
@@ -267,7 +267,7 @@ class BigDecimalTypeConverterTest extends TestCase
                 int $version,
                 bool $oneWay = false,
                 ?string $uriParserClass = null
-            ): ?string {
+            ): string {
                 return $this->recordedResponse;
             }
         };

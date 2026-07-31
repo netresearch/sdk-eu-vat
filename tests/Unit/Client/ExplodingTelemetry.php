@@ -13,7 +13,7 @@ use Netresearch\EuVatSdk\Telemetry\TelemetryInterface;
  */
 final class ExplodingTelemetry implements TelemetryInterface
 {
-    public const MESSAGE = 'metrics backend is down';
+    public const string MESSAGE = 'metrics backend is down';
 
     /**
      * @param string               $operation Ignored

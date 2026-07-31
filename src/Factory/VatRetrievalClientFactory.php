@@ -51,7 +51,7 @@ class VatRetrievalClientFactory
     /**
      * Default connection timeout in seconds
      */
-    private const DEFAULT_TIMEOUT = 30;
+    private const int DEFAULT_TIMEOUT = 30;
 
     /**
      * Create a production-ready client with default configuration

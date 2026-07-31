@@ -39,7 +39,7 @@ class ServiceInteractionTest extends IntegrationTestCase
     /**
      * The date recorded in every cassette this class replays
      */
-    private const SITUATION_ON = '2024-01-01';
+    private const string SITUATION_ON = '2024-01-01';
 
     /**
      * Member states recorded in the vat-rates-all-eu-members cassette
@@ -48,7 +48,7 @@ class ServiceInteractionTest extends IntegrationTestCase
      *
      * @var array<string>
      */
-    private const ALL_MEMBER_STATES = [
+    private const array ALL_MEMBER_STATES = [
         'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'EL', 'HU', 'IE',
         'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
     ];
@@ -56,7 +56,7 @@ class ServiceInteractionTest extends IntegrationTestCase
     /**
      * Rows in the vat-rates-all-eu-members cassette
      */
-    private const ALL_MEMBER_RESULT_COUNT = 1128;
+    private const int ALL_MEMBER_RESULT_COUNT = 1128;
 
     /**
      * Number of SOAP interactions VCR answered from a cassette
@@ -190,7 +190,7 @@ class ServiceInteractionTest extends IntegrationTestCase
     {
         // Read the parent through reflection: in the source AbusedClient extends
         // \SoapClient, and only the rewritten copy VCR loads extends VcrSoapClient.
-        $parent = (new \ReflectionClass(AbusedClient::class))->getParentClass();
+        $parent = new \ReflectionClass(AbusedClient::class)->getParentClass();
 
         $this->assertNotFalse($parent, 'The SOAP transport must extend a client class');
         $this->assertSame(

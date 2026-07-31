@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Integration;
 
+use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use PHPUnit\Framework\Attributes\Group;
 use Netresearch\EuVatSdk\Exception\InvalidRequestException;
 use Netresearch\EuVatSdk\Exception\SoapFaultException;
@@ -41,7 +42,7 @@ class EndToEndTest extends IntegrationTestCase
 
         // Step 1: Create client with default configuration
         $client = VatRetrievalClientFactory::create();
-        $this->assertNotNull($client, 'Client should be created successfully');
+        $this->assertInstanceOf(SoapVatRetrievalClient::class, $client);
 
         // Step 2: Make a simple request
         $request = new VatRatesRequest(
@@ -100,7 +101,7 @@ class EndToEndTest extends IntegrationTestCase
 
         // Test readonly properties work (PHP 8.1+)
         foreach ($response->getResults() as $result) {
-            $this->assertIsString($result->getMemberState());
+            $this->assertMatchesRegularExpression('/^[A-Z]{2}$/', $result->getMemberState());
             $this->assertInstanceOf(\DateTimeInterface::class, $result->getSituationOn());
         }
     }
@@ -138,7 +139,9 @@ class EndToEndTest extends IntegrationTestCase
             'Should receive at least one rate for each requested member state.'
         );
 
-        $returnedStates = array_unique(array_map(fn($result): string => $result->getMemberState(), $results));
+        $returnedStates = array_unique(
+            array_map(fn(VatRateResult $result): string => $result->getMemberState(), $results)
+        );
         $this->assertEmpty(
             array_diff($euMembers, $returnedStates),
             'All requested EU member states should be present in the response.'
@@ -211,7 +214,7 @@ class EndToEndTest extends IntegrationTestCase
             $client->retrieveVatRates($request);
             $this->fail('Should throw exception for empty states');
         } catch (VatServiceException) {
-            $this->assertTrue(true);
+            $this->addToAssertionCount(1);
         }
 
         // Test 3: Configuration errors
@@ -224,7 +227,7 @@ class EndToEndTest extends IntegrationTestCase
             $invalidClient->retrieveVatRates($request);
             $this->fail('Should throw ConfigurationException');
         } catch (ConfigurationException) {
-            $this->assertTrue(true);
+            $this->addToAssertionCount(1);
         }
     }
 
@@ -244,7 +247,7 @@ class EndToEndTest extends IntegrationTestCase
             $vatRate = $result->getRate();
 
             // Test precise decimal handling
-            $decimalValue = $vatRate->getDecimalValue();
+            $decimalValue = $vatRate->getValue();
             $this->assertInstanceOf(BigDecimal::class, $decimalValue);
 
             // Test financial calculations
@@ -423,9 +426,9 @@ class EndToEndTest extends IntegrationTestCase
         );
 
         try {
-            $response = $client->retrieveVatRates($oldRequest);
+            $client->retrieveVatRates($oldRequest);
             // Service might return data or error for very old dates
-            $this->assertNotNull($response);
+            $this->addToAssertionCount(1);
         } catch (VatServiceException) {
         }
 
@@ -434,7 +437,7 @@ class EndToEndTest extends IntegrationTestCase
             new VatRatesRequest(['D', 'F'], new DateTime('2024-01-01'));
             $this->fail('Should reject single character country codes');
         } catch (\Exception) {
-            $this->assertTrue(true);
+            $this->addToAssertionCount(1);
         }
 
         // Test 3: Mixed case country codes (should be normalized)
@@ -447,7 +450,7 @@ class EndToEndTest extends IntegrationTestCase
 
         // Verify normalization worked
         $countries = array_map(
-            fn($r): string => $r->getMemberState(),
+            fn(VatRateResult $r): string => $r->getMemberState(),
             $response->getResults()
         );
 

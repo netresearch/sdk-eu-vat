@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+The PHP 8.4 major. It raises the floor to `^8.4` and lands every update that the 8.2
+floor was holding back, including the runtime SOAP engine.
+
+### Breaking changes
+
+- **PHP `^8.4` is now required**, where `^8.2` was previously accepted. This is the
+  change that unblocks everything below: `php-soap/ext-soap-engine` 1.8.0 onwards
+  requires PHP 8.3+, and 1.12.0 requires `~8.4.0 || ~8.5.0`, so 1.7.0 was the only
+  release installable on the old floor. PHP 8.5 is supported and covered by CI
+- **`php-soap/ext-soap-engine` now requires `^1.12`**, where `^1.7` was previously
+  accepted. This is a runtime dependency, so consumers pinned below 1.12 cannot
+  install this release
+- **`VatRate::getDecimalValue()` and `VatRate::getValueAsFloat()` are removed.** Both
+  carried an `@deprecated` tag since 1.0.0. `getDecimalValue()` was a plain alias of
+  `getValue()`; replace it one-for-one. `getValueAsFloat()` has no direct replacement
+  by design — reintroducing float rounding into a VAT calculation is the bug the
+  `BigDecimal` return type exists to prevent. Use `getValue()` and stay in decimal, or
+  call `->toFloat()` on the result at the point where a float is genuinely needed
+
+### Changed
+
+- `php-vcr/php-vcr` raised to `>=1.6.4 <1.12`, from `>=1.6.4 <1.8.2`. The cap existed
+  only because `ext-soap-engine` 1.7.0's `AbusedClient::__doRequest()` does not declare
+  the `$uriParserClass` parameter php-vcr 1.8.2+ requires; 1.12.0 declares it. The
+  lower bound is deliberate and stays — it excludes 1.6.3 and below
+- `phpunit/phpunit` raised to `^13.0`, from `^11.5.56`. v3.0.0 had already converted all
+  metadata to attributes, which is the migration PHPUnit 12 forces, so no test metadata
+  changed here. PHPUnit 13 reports a notice for every `createMock()` whose double never
+  receives an expectation; those doubles are now `createStub()`, and the two fault-logging
+  tests that do assert on the logger build their own mock locally
+- `phpstan/phpstan` raised to `^2.2.6` and `rector/rector` to `^2.5`, in one step. Neither
+  could move alone: Rector 1.x requires `phpstan ^1.x` and Rector 2.x requires `^2.x`
+- Rector now targets `UP_TO_PHP_84`, which is the payoff for doing the tooling bump
+  alongside the floor raise. Class constants gained types, `ReflectionMethod::setAccessible()`
+  calls were dropped, and `new Foo()->bar()` replaced the parenthesised form
+- `phpstan.neon` no longer sets `checkGenericClassInNonGenericObjectType` — PHPStan 2
+  rejects the key and refuses to start. Ten of the fifteen `ignoreErrors` patterns no
+  longer matched anything and were removed, among them a blanket
+  `If condition is always true.` that would have masked real findings
+
+### Fixed
+
+- Four pieces of dead defensive code that PHPStan 2 surfaced in `src/`: a `?? new NullLogger()`
+  behind a non-nullable `ClientConfiguration::$logger`, an `instanceof stdClass` guarded by
+  a `@var stdClass` that made it unconditionally true, and a `?? ''` on a value already
+  narrowed to non-null. The `instanceof` guard is kept and the misleading annotation removed,
+  so the check now does what it was written to do
+- `@SuppressWarnings(PHPMD.*)` annotations are quoted. phpdoc-parser 2.x fails to parse the
+  unquoted form, which PHPStan 2 reports as four parse errors
+
 ## [3.0.0] - 2026-07-30
 
 The last release supporting PHP 8.2. Every dependency is moved to the newest version
