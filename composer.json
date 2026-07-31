@@ -21,7 +21,7 @@
         "php": "^8.4",
         "ext-libxml": "*",
         "ext-soap": "*",
-        "brick/math": "^0.18",
+        "brick/math": "^0.18 || ^0.19",
         "php-soap/ext-soap-engine": "^1.12",
         "psr/log": "^1.0 || ^2.0 || ^3.0"
     },
@@ -32,9 +32,10 @@
         "squizlabs/php_codesniffer": "^4.0",
         "slevomat/coding-standard": "^8.0",
         "rector/rector": "^2.5",
-        "php-vcr/php-vcr": ">=1.6.4 <1.12",
+        "php-vcr/php-vcr": ">=1.8.1 <1.12",
         "phpmd/phpmd": "^2.13",
-        "symfony/event-dispatcher": "^6.0 || ^7.0"
+        "symfony/event-dispatcher": "^6.4.8 || ^7.1",
+        "symfony/event-dispatcher-contracts": "^3.5"
     },
     "autoload": {
         "psr-4": {
