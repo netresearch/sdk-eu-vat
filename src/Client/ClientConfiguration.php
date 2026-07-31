@@ -51,22 +51,22 @@ final class ClientConfiguration
     /**
      * EU VAT Retrieval Service production endpoint
      */
-    public const ENDPOINT_PRODUCTION = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService';
+    public const string ENDPOINT_PRODUCTION = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService';
 
     /**
      * EU VAT Retrieval Service acceptance/test endpoint
      */
-    public const ENDPOINT_TEST = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC';
+    public const string ENDPOINT_TEST = 'https://ec.europa.eu/taxation_customs/tedb/ws/VatRetrievalService-ACC';
 
     /**
      * Default connection timeout in seconds
      */
-    public const DEFAULT_TIMEOUT = 30;
+    public const int DEFAULT_TIMEOUT = 30;
 
     /**
      * Maximum reasonable timeout in seconds
      */
-    public const MAX_TIMEOUT = 300;
+    public const int MAX_TIMEOUT = 300;
 
     /**
      * Service endpoint URL for SOAP requests

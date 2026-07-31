@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Netresearch\EuVatSdk\Tests\Unit\Converter;
 
+use Netresearch\EuVatSdk\DTO\Response\VatRateResult;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Netresearch\EuVatSdk\Converter\VatRatesResponseConverter;
@@ -121,7 +122,7 @@ class VatRatesResponseConverterTest extends TestCase
 
         $this->assertCount(3, $results);
         $this->assertSame(['DE', 'FR', 'NL'], array_map(
-            static fn($result): string => $result->getMemberState(),
+            static fn(VatRateResult $result): string => $result->getMemberState(),
             $results
         ));
         $this->assertSame('19.0', $results[0]->getRate()->getRawValue());
@@ -242,7 +243,7 @@ class VatRatesResponseConverterTest extends TestCase
 
         $this->assertCount(3, $converted->getResults());
         $this->assertSame(['FOODSTUFFS', null, 'ACCOMMODATION'], array_map(
-            static fn($result): ?string => $result->getCategory(),
+            static fn(VatRateResult $result): ?string => $result->getCategory(),
             $converted->getResults()
         ));
 

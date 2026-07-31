@@ -193,7 +193,7 @@ class VatRateErrorHandlingTest extends IntegrationTestCase
             $client->retrieveVatRates($request);
 
             // If request completes within timeout, that's OK
-            $this->assertTrue(true);
+            $this->addToAssertionCount(1);
         } catch (ServiceUnavailableException $e) {
             // Timeout should be wrapped in ServiceUnavailableException
             $this->assertStringContainsString('Network error', $e->getMessage());

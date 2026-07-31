@@ -36,7 +36,7 @@ class SoapHydrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->logger = $this->createStub(LoggerInterface::class);
         $this->config = ClientConfiguration::test($this->logger);
     }
 
@@ -86,12 +86,15 @@ class SoapHydrationTest extends TestCase
         // Attempt to instantiate VatRatesResponse the way ClassMap would
         try {
             // ClassMap instantiation - creates object without calling constructor
-            $response = (new \ReflectionClass(VatRatesResponse::class))->newInstanceWithoutConstructor();
+            $response = new \ReflectionClass(VatRatesResponse::class)->newInstanceWithoutConstructor();
 
             // This will fail because $results property is not initialized
-            $response->getResults();
+            $results = $response->getResults();
 
-            $this->fail('Expected error when accessing uninitialized readonly property');
+            $this->fail(sprintf(
+                'Expected error when accessing uninitialized readonly property, got %d results',
+                count($results)
+            ));
         } catch (\Error $e) {
             $this->assertStringContainsString('must not be accessed before initialization', $e->getMessage());
             // This proves why ClassMap can't work with current DTO design
@@ -99,16 +102,19 @@ class SoapHydrationTest extends TestCase
 
         // Same issue with VatRateResult
         try {
-            $result = (new \ReflectionClass(VatRateResult::class))->newInstanceWithoutConstructor();
-            $result->getMemberState();
+            $result = new \ReflectionClass(VatRateResult::class)->newInstanceWithoutConstructor();
+            $memberState = $result->getMemberState();
 
-            $this->fail('Expected error when accessing uninitialized property');
+            $this->fail(sprintf(
+                'Expected error when accessing uninitialized property, got "%s"',
+                $memberState
+            ));
         } catch (\Error $e) {
             $this->assertStringContainsString('must not be accessed before initialization', $e->getMessage());
         }
 
         // VatRate works because it uses lazy initialization
-        $rate = (new \ReflectionClass(VatRate::class))->newInstanceWithoutConstructor();
+        $rate = new \ReflectionClass(VatRate::class)->newInstanceWithoutConstructor();
         $reflection = new \ReflectionProperty(VatRate::class, 'type');
         $reflection->setValue($rate, 'STANDARD');
         $reflection = new \ReflectionProperty(VatRate::class, 'value');

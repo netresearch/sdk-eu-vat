@@ -104,7 +104,7 @@ class DateTypeConverterTest extends TestCase
             'typemap' => [[
                 'type_ns' => $converter->getTypeNamespace(),
                 'type_name' => $converter->getTypeName(),
-                'to_xml' => static fn ($php): string => $converter->convertPhpToXml($php),
+                'to_xml' => $converter->convertPhpToXml(...),
             ]],
             'location' => 'http://localhost/unused',
         ]) extends \SoapClient {
@@ -120,7 +120,7 @@ class DateTypeConverterTest extends TestCase
                 int $version,
                 bool $oneWay = false,
                 ?string $uriParserClass = null
-            ): ?string {
+            ): string {
                 $this->capturedRequest = $request;
                 return '';
             }

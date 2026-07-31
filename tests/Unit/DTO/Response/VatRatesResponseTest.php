@@ -62,7 +62,6 @@ class VatRatesResponseTest extends TestCase
         $results = $this->response->getResultsForCountry('XX');
 
         $this->assertCount(0, $results);
-        $this->assertIsArray($results);
     }
 
     public function testGetResultsByCategory(): void
@@ -96,14 +95,13 @@ class VatRatesResponseTest extends TestCase
         $results = $this->response->getResultsByCategory('NONEXISTENT');
 
         $this->assertCount(0, $results);
-        $this->assertIsArray($results);
     }
 
     public function testIteratorInterface(): void
     {
         $count = 0;
         foreach ($this->response as $key => $result) {
-            $this->assertIsInt($key);
+            $this->assertSame($count, $key, 'Iterator keys must be sequential');
             $this->assertInstanceOf(VatRateResult::class, $result);
             $count++;
         }

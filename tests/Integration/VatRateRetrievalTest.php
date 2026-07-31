@@ -168,7 +168,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
 
         // Verify all countries are present (multiple results per country)
         $returnedCountries = array_values(array_unique(array_map(
-            fn($result): string => $result->getMemberState(),
+            fn(VatRateResult $result): string => $result->getMemberState(),
             $response->getResults()
         )));
 
@@ -181,7 +181,7 @@ class VatRateRetrievalTest extends IntegrationTestCase
         foreach ($euMemberStates as $memberState) {
             $standardResult = $this->findStandardRateResult($response->getResults(), $memberState);
             $this->assertNotNull($standardResult, "Should find standard VAT rate for {$memberState}");
-            $decimalValue = $standardResult->getRate()->getDecimalValue();
+            $decimalValue = $standardResult->getRate()->getValue();
             $this->assertNotNull($decimalValue);
             $this->assertGreaterThan(0, $decimalValue->toFloat());
             $this->assertLessThanOrEqual(27, $decimalValue->toFloat()); // Hungary has 27%

@@ -45,7 +45,6 @@ foreach ($sqlInjectionTests as $test) {
         // If we get here, check if the values were sanitized
         $reflection = new ReflectionObject($request);
         $prop = $reflection->getProperty('memberStates');
-        $prop->setAccessible(true);
         $values = $prop->getValue($request);
 
         // Check if dangerous input was properly handled
@@ -114,7 +113,7 @@ foreach ($errorScenarios as $scenario) {
             new VatRatesRequest(['DE'], new \DateTime($scenario['date']));
         } else {
             $request = new VatRatesRequest(
-                $scenario['countries'] ?? ['DE'],
+                $scenario['countries'],
                 new \DateTime('2024-01-01')
             );
             $client->retrieveVatRates($request);
@@ -197,7 +196,6 @@ try {
 $defaultConfig = ClientConfiguration::production();
 $reflection = new ReflectionObject($defaultConfig);
 $timeoutProp = $reflection->getProperty('timeout');
-$timeoutProp->setAccessible(true);
 $timeout = $timeoutProp->getValue($defaultConfig);
 
 if ($timeout > 300) {

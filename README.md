@@ -5,7 +5,7 @@
 [![Latest Stable Version](https://poser.pugx.org/netresearch/sdk-eu-vat/v/stable)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 [![License](https://poser.pugx.org/netresearch/sdk-eu-vat/license)](https://packagist.org/packages/netresearch/sdk-eu-vat)
 
-A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states, decoded into arbitrary-precision decimals rather than floats.
+A modern PHP 8.4+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/taxation_customs/tedb/) that provides reliable access to official VAT rates for all EU member states, decoded into arbitrary-precision decimals rather than floats.
 
 ## Features
 
@@ -23,7 +23,7 @@ A modern PHP 8.2+ SDK for the [EU VAT Retrieval Service](https://ec.europa.eu/ta
 composer require netresearch/sdk-eu-vat
 ```
 
-**Requirements:** PHP 8.2+, `ext-soap` and `ext-libxml` extensions
+**Requirements:** PHP 8.4+, `ext-soap` and `ext-libxml` extensions
 
 💡 **Having installation issues?** See the [Installation Guide](INSTALLATION.md) for troubleshooting help.
 
@@ -325,7 +325,8 @@ composer audit
 
 ### Development Requirements
 
-- PHP 8.2+
+- PHP 8.4.1+ (the library itself runs on any 8.4; PHPUnit 13 requires 8.4.1, which
+  is the first PHP 8.4 release that shipped as GA)
 - Composer 2.0+
 - All quality tools must pass (PHPStan level 8, PHPCS PSR-12)
 

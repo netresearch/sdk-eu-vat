@@ -34,14 +34,14 @@ class FaultEventListenerTest extends TestCase
     /**
      * Fault string exactly as recorded from the service
      */
-    private const REAL_FAULT_STRING = 'TEDB-ERR-2 - Request is not valid';
+    private const string REAL_FAULT_STRING = 'TEDB-ERR-2 - Request is not valid';
 
     private LoggerInterface $logger;
     private FaultEventListener $listener;
 
     protected function setUp(): void
     {
-        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->logger = $this->createStub(LoggerInterface::class);
         $this->listener = new FaultEventListener($this->logger);
     }
 
@@ -85,16 +85,18 @@ class FaultEventListenerTest extends TestCase
     {
         $fault = $this->createRealClientFault();
 
-        $this->logger->expects($this->once())
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
             ->method('error')
             ->with(
                 'SOAP Fault received from EU VAT service',
                 $this->callback(fn($context): bool => $context['fault_code'] === 'env:Client'
                     && $context['fault_string'] === self::REAL_FAULT_STRING)
             );
+        $listener = new FaultEventListener($logger);
 
         try {
-            $this->listener->handleSoapFault($fault);
+            $listener->handleSoapFault($fault);
             $this->fail('Expected InvalidRequestException');
         } catch (InvalidRequestException $e) {
             $this->assertSame('TEDB-ERR-2', $e->getErrorCode());
@@ -374,16 +376,18 @@ class FaultEventListenerTest extends TestCase
         $fault = $this->createRealClientFault();
         $detail = $fault->detail;
 
-        $this->logger->expects($this->once())
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
             ->method('error')
             ->with(
                 'SOAP Fault received from EU VAT service',
                 $this->callback(fn($context): bool => $context['fault_detail'] === $detail)
             );
+        $listener = new FaultEventListener($logger);
 
         $this->expectException(InvalidRequestException::class);
 
-        $this->listener->handleSoapFault($fault);
+        $listener->handleSoapFault($fault);
     }
 
     /**

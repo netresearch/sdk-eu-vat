@@ -11,6 +11,7 @@ use Rector\CodeQuality\Rector\ClassMethod\LocallyCalledStaticMethodToNonStaticRe
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessParamTagRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessReturnTagRector;
 use Rector\Php81\Rector\Property\ReadOnlyPropertyRector;
+use Rector\TypeDeclaration\Rector\Class_\TypedPropertyFromCreateMockAssignRector;
 
 return static function (RectorConfig $rectorConfig): void {
     // Paths to refactor
@@ -27,11 +28,16 @@ return static function (RectorConfig $rectorConfig): void {
         // Promoting classes to `readonly` is a BC break for consumers that
         // extend or mock them, so leave the class-level modifier alone.
         \Rector\Php82\Rector\Class_\ReadOnlyClassRector::class,
+
+        // Retyping a mocked test property from the interface it doubles to
+        // MockObject discards the contract the test is written against, and
+        // leaves static analysis unable to check the mocked calls.
+        TypedPropertyFromCreateMockAssignRector::class,
     ]);
 
     // PHP version and sets
     $rectorConfig->sets([
-        LevelSetList::UP_TO_PHP_82,
+        LevelSetList::UP_TO_PHP_84,
         SetList::CODE_QUALITY,
         SetList::DEAD_CODE,
         SetList::TYPE_DECLARATION,

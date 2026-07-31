@@ -113,17 +113,6 @@ final class VatRate implements \Stringable
     }
 
     /**
-     * Get the value as a BigDecimal for precise calculations
-     *
-     * @deprecated Use getValue() instead
-     * @return BigDecimal|null The VAT rate as a BigDecimal instance, or null if no value was provided
-     */
-    public function getDecimalValue(): ?BigDecimal
-    {
-        return $this->getValue();
-    }
-
-    /**
      * Get the raw string value as received from the API
      *
      * @return string|null The VAT rate percentage as a string (e.g., "19.0"),
@@ -132,17 +121,6 @@ final class VatRate implements \Stringable
     public function getRawValue(): ?string
     {
         return $this->value;
-    }
-
-    /**
-     * Get the value as float (use with caution for calculations)
-     *
-     * @deprecated Since 1.0.0, use getValue() for precise calculations
-     * @return float|null The VAT rate as a floating-point number, or null if no value was provided
-     */
-    public function getValueAsFloat(): ?float
-    {
-        return $this->getValue()?->toFloat();
     }
 
     /**
@@ -186,7 +164,7 @@ final class VatRate implements \Stringable
     public function isParkingRate(): bool
     {
         $normalizedType = $this->getType();
-        return $normalizedType === 'PK' || $normalizedType === 'PARKING' || $normalizedType === 'PARKING_RATE';
+        return in_array($normalizedType, ['PK', 'PARKING', 'PARKING_RATE'], true);
     }
 
     /**
@@ -208,8 +186,7 @@ final class VatRate implements \Stringable
     public function isExempt(): bool
     {
         $normalizedType = $this->getType();
-        return $normalizedType === 'E' || $normalizedType === 'EXEMPT' || $normalizedType === 'EXEMPTED' ||
-               $normalizedType === 'NOT_APPLICABLE' || $normalizedType === 'OUT_OF_SCOPE';
+        return in_array($normalizedType, ['E', 'EXEMPT', 'EXEMPTED', 'NOT_APPLICABLE', 'OUT_OF_SCOPE'], true);
     }
 
     /**

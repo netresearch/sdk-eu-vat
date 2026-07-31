@@ -31,7 +31,7 @@ class TelemetryIntegrationTest extends TestCase
     /**
      * Wall-clock time the faked SOAP call is made to consume, in microseconds
      */
-    private const SIMULATED_CALL_MICROSECONDS = 50000;
+    private const int SIMULATED_CALL_MICROSECONDS = 50000;
 
     private RecordingTelemetry $telemetry;
 

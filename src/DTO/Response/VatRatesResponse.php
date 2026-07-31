@@ -69,7 +69,7 @@ use LogicException;
  * @package Netresearch\EuVatSdk\DTO\Response
  * @author  Netresearch DTT GmbH
  * @license https://opensource.org/licenses/MIT MIT License
- * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
 final class VatRatesResponse implements Iterator, ArrayAccess, Countable
 {
@@ -185,13 +185,13 @@ final class VatRatesResponse implements Iterator, ArrayAccess, Countable
         return $this->results[$offset];
     }
 
-    /** @SuppressWarnings(PHPMD.UnusedFormalParameter) */
+    /** @SuppressWarnings("PHPMD.UnusedFormalParameter") */
     public function offsetSet(mixed $offset, mixed $value): void
     {
         throw new LogicException('VatRatesResponse is immutable');
     }
 
-    /** @SuppressWarnings(PHPMD.UnusedFormalParameter) */
+    /** @SuppressWarnings("PHPMD.UnusedFormalParameter") */
     public function offsetUnset(mixed $offset): void
     {
         throw new LogicException('VatRatesResponse is immutable');

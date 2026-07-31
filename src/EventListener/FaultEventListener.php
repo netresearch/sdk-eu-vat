@@ -93,14 +93,14 @@ final class FaultEventListener
      *
      * `Client` is the SOAP 1.1 spelling, `Sender` the SOAP 1.2 one.
      */
-    private const CLIENT_FAULT_CODES = ['client', 'sender'];
+    private const array CLIENT_FAULT_CODES = ['client', 'sender'];
 
     /**
      * SOAP faultcode local parts that place responsibility on the service
      *
      * `Server` is the SOAP 1.1 spelling, `Receiver` the SOAP 1.2 one.
      */
-    private const SERVER_FAULT_CODES = ['server', 'receiver'];
+    private const array SERVER_FAULT_CODES = ['server', 'receiver'];
 
     /**
      * SOAP envelope namespaces a fault code may legitimately be bound to
@@ -108,7 +108,7 @@ final class FaultEventListener
      * Used to reject fault codes whose local part reads like a responsibility
      * marker but belongs to an unrelated namespace.
      */
-    private const SOAP_ENVELOPE_NAMESPACES = [
+    private const array SOAP_ENVELOPE_NAMESPACES = [
         'http://schemas.xmlsoap.org/soap/envelope/', // SOAP 1.1
         'http://www.w3.org/2003/05/soap-envelope',   // SOAP 1.2
     ];
@@ -116,17 +116,17 @@ final class FaultEventListener
     /**
      * Message used when a fault carries no usable fault string
      */
-    private const NO_FAULT_STRING = 'No fault string provided';
+    private const string NO_FAULT_STRING = 'No fault string provided';
 
     /**
      * Maximum number of nested levels walked when collecting fault detail errors
      */
-    private const DETAIL_MAX_DEPTH = 10;
+    private const int DETAIL_MAX_DEPTH = 10;
 
     /**
      * Maximum number of error descriptions collected from a single fault detail
      */
-    private const DETAIL_MAX_ERRORS = 20;
+    private const int DETAIL_MAX_ERRORS = 20;
 
     /**
      * Create fault event listener with logger
@@ -351,7 +351,7 @@ final class FaultEventListener
     {
         $segments = explode(':', $faultCode);
 
-        return strtolower(trim((string) end($segments)));
+        return strtolower(trim(end($segments)));
     }
 
     /**
@@ -376,7 +376,7 @@ final class FaultEventListener
      */
     private function normaliseFaultString(?string $faultString): string
     {
-        return trim($faultString ?? '') === '' ? self::NO_FAULT_STRING : $faultString ?? '';
+        return trim($faultString ?? '') === '' ? self::NO_FAULT_STRING : $faultString;
     }
 
     /**
