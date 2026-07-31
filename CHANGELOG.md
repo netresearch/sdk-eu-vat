@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-07-31
+
 The PHP 8.4 major. It raises the floor to `^8.4` and lands every update that the 8.2
 floor was holding back, including the runtime SOAP engine.
 
