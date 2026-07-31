@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `brick/math` accepts `^0.18 || ^0.19`, where only `^0.18` was previously accepted.
+  0.19.0 is purely additive — a `RoundingMode::HalfOdd` case and
+  `RoundingMode::fromNativeRoundingMode()`. The range is widened rather than moved,
+  because `BigDecimal` is public API here via `VatRate::getValue()`, and for a `0.x`
+  package `^0.18` and `^0.19` are mutually exclusive: replacing the constraint would
+  lock out consumers pinned to 0.18 for no gain
+
+### Fixed
+
+- Three dev-dependency lower bounds were declared but broken on PHP 8.4, and are raised
+  to versions that actually work: `php-vcr/php-vcr` to `>=1.8.1` (1.6.4 declares a bare
+  `php: ^8` and predates 8.4 support), `symfony/event-dispatcher` to `^6.4.8 || ^7.1`
+  (6.4.7 and below, and 7.0.x, declare `hasListeners(string $eventName = null)`), and a
+  direct `symfony/event-dispatcher-contracts: ^3.5` requirement (3.4 and below, including
+  the 2.5 that every event-dispatcher release still admits, declare
+  `dispatch(object $event, string $eventName = null)`). At their old floors all three
+  emit PHP 8.4 implicit-nullable deprecations, which ext-soap converts into a
+  `ServiceUnavailableException` — a failed SOAP call, not a warning. Consumers were never
+  affected: all three are `require-dev`
+
+### Added
+
+- A `Tests (lowest deps)` CI job resolving every constraint to its floor
+  (`dependency-versions: lowest`). There is no lockfile, so the normal run always
+  installs the newest set and could never exercise the oldest one — which is how the
+  bounds above stayed broken while CI was green
+
 ## [4.0.0] - 2026-07-31
 
 The PHP 8.4 major. It raises the floor to `^8.4` and lands every update that the 8.2

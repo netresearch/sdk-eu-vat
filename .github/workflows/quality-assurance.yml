@@ -45,6 +45,26 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  tests-lowest:
+    name: Tests (lowest deps)
+    uses: netresearch/.github/.github/workflows/php-ci.yml@main
+    permissions:
+      contents: read
+    with:
+      php-versions: '["8.4"]'
+      extensions: "soap, libxml, mbstring"
+      coverage: "none"
+      run-phpstan: false
+      # Resolves every constraint to its floor instead of its ceiling. Without
+      # this leg a lower bound is a claim rather than a tested fact: there is no
+      # lockfile, so the normal run always installs the newest set and can never
+      # exercise the oldest one. That is how `php-vcr >=1.6.4` and
+      # `symfony/event-dispatcher ^6.0` sat here declared-but-broken -- at their
+      # floors both emit PHP 8.4 implicit-nullable deprecations that ext-soap
+      # turns into a failed SOAP call.
+      dependency-versions: "lowest"
+      phpunit-cmd: 'vendor/bin/phpunit --testsuite=unit --no-coverage && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --testsuite=integration --no-coverage && USE_PRODUCTION_ENDPOINT=false REFRESH_CASSETTES=false vendor/bin/phpunit --group network --no-coverage'
+
   security:
     name: Security Scan
     uses: netresearch/.github/.github/workflows/php-ci.yml@main
