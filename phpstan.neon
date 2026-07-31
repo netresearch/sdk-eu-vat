@@ -12,18 +12,18 @@ parameters:
 
     # Custom error patterns for financial SDK
     ignoreErrors:
-        # PHPUnit mock objects have dynamic expects() method
-        - '#Call to an undefined method .+Interface::expects\(\)\.#'
-
         # Test helper methods that are dynamically created
         - '#Call to an undefined method .+::getConfiguration\(\)\.#'
 
         # Reflection method access in tests
-        - '#Cannot call method setAccessible\(\) on ReflectionMethod\|null\.#'
         - '#Cannot call method invoke\(\) on ReflectionMethod\|null\.#'
 
         # Test data type mismatches (acceptable in unit tests)
         - '#Parameter \#1 \$memberStates of class .+VatRatesRequest constructor expects array<string>, array<int, int> given\.#'
 
     # Ensure proper type declarations
-    reportUnmatchedIgnoredErrors: false
+    #
+    # A pattern that stops matching is reported rather than ignored. Suppressing
+    # that report is what let twelve of the original fifteen patterns rot into
+    # place unnoticed, one of them a blanket rule that masked a real finding.
+    reportUnmatchedIgnoredErrors: true

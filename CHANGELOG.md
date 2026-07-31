@@ -23,8 +23,10 @@ floor was holding back, including the runtime SOAP engine.
   carried an `@deprecated` tag since 1.0.0. `getDecimalValue()` was a plain alias of
   `getValue()`; replace it one-for-one. `getValueAsFloat()` has no direct replacement
   by design — reintroducing float rounding into a VAT calculation is the bug the
-  `BigDecimal` return type exists to prevent. Use `getValue()` and stay in decimal, or
-  call `->toFloat()` on the result at the point where a float is genuinely needed
+  `BigDecimal` return type exists to prevent. Use `getValue()` and stay in decimal. Where
+  a float is genuinely needed, note that `getValue()` is nullable, so the replacement is
+  `$rate->getValue()?->toFloat()` — the removed method used the null-safe operator too,
+  and dropping it fatals on any rate the member state does not levy
 
 ### Changed
 
