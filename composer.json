@@ -21,7 +21,7 @@
         "php": "^8.4",
         "ext-libxml": "*",
         "ext-soap": "*",
-        "brick/math": "^0.18 || ^0.19",
+        "brick/math": "^0.18 || ^0.19 || ^1.0",
         "php-soap/ext-soap-engine": "^1.12",
         "psr/log": "^1.0 || ^2.0 || ^3.0"
     },
