@@ -32,7 +32,7 @@
         "squizlabs/php_codesniffer": "^4.0",
         "slevomat/coding-standard": "^8.0",
         "rector/rector": "^2.5",
-        "php-vcr/php-vcr": ">=1.8.1 <1.12",
+        "php-vcr/php-vcr": "<1.13",
         "phpmd/phpmd": "^2.13",
         "symfony/event-dispatcher": "^6.4.8 || ^7.1",
         "symfony/event-dispatcher-contracts": "^3.5"
